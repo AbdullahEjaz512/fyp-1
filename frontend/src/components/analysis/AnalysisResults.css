@@ -1,0 +1,420 @@
+.analysis-results {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Summary Card */
+.summary-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.summary-icon {
+  flex-shrink: 0;
+}
+
+.summary-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.summary-date {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  margin: 0.25rem 0 0 0;
+}
+
+.summary-diagnosis {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.diagnosis-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.diagnosis-value {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0.5rem 0 0 0;
+}
+
+.confidence-badge {
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+}
+
+.summary-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+}
+
+.summary-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-label {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.detail-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Segmentation Card */
+.segmentation-card,
+.classification-card {
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.card-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.regions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.region-card {
+  background: var(--background);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  border-left: 4px solid;
+}
+
+.region-card.ncr {
+  border-left-color: #ef4444;
+}
+
+.region-card.ed {
+  border-left-color: #f59e0b;
+}
+
+.region-card.et {
+  border-left-color: #10b981;
+}
+
+.region-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.region-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.region-card.ncr .region-color {
+  background: #ef4444;
+}
+
+.region-card.ed .region-color {
+  background: #f59e0b;
+}
+
+.region-card.et .region-color {
+  background: #10b981;
+}
+
+.region-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.region-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.region-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.stat-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.total-volume-card {
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.total-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.total-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.total-voxels {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 0.5rem;
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.metric-value {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+}
+
+/* Classification */
+.classification-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.class-prediction {
+  background: var(--background);
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+}
+
+.class-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.class-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0.5rem 0 1rem 0;
+}
+
+.confidence-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.confidence-fill {
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.confidence-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.classification-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.class-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--background);
+  border-radius: 0.5rem;
+}
+
+.class-detail-item svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.class-detail-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.class-detail-value {
+  display: block;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1.125rem;
+}
+
+.probabilities-section {
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+.probabilities-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+.probabilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.probability-item {
+  display: grid;
+  grid-template-columns: 150px 1fr 60px;
+  align-items: center;
+  gap: 1rem;
+}
+
+.probability-name {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.probability-bar-container {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.probability-bar {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+
+.probability-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+/* Note Card */
+.note-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 0.75rem;
+  color: #1e40af;
+}
+
+.note-card svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.note-card p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .summary-diagnosis {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .regions-grid,
+  .classification-main {
+    grid-template-columns: 1fr;
+  }
+
+  .probability-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .probability-value {
+    text-align: left;
+  }
+}

@@ -1,0 +1,84 @@
+# Core Deep Learning Frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# Medical Imaging AI Framework
+monai>=1.3.0
+
+# Medical Image Processing
+nibabel>=5.0.0
+SimpleITK>=2.3.0
+pydicom>=2.4.0
+scikit-image>=0.22.0
+
+# Backend Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Firebase Integration
+firebase-admin>=6.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-dotenv>=1.0.0
+
+# Data Processing & Analysis
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
+scipy>=1.11.0
+
+# Visualization
+matplotlib>=3.7.0
+plotly>=5.17.0
+seaborn>=0.12.0
+
+# Report Generation
+reportlab>=4.0.0
+Pillow>=10.0.0
+
+# Explainable AI
+shap>=0.43.0
+grad-cam>=1.4.0
+
+# Database & Cloud
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+pymongo>=4.0.0
+google-cloud-storage>=2.10.0
+google-cloud-firestore>=2.13.0
+
+# HTTP & Networking
+httpx>=0.25.0
+requests>=2.31.0
+aiofiles>=23.0.0
+
+# Utilities
+tqdm>=4.66.0
+python-dateutil>=2.8.0
+pyyaml>=6.0.0
+click>=8.1.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code Quality
+black>=23.0.0
+flake8>=6.1.0
+mypy>=1.7.0
+
+# Synapse Client (for dataset management)
+synapseclient>=4.10.0
+
+# ONNX for browser-based inference
+onnx>=1.15.0
+onnxruntime>=1.16.0
+
+# Jupyter for experimentation
+jupyter>=1.0.0
+ipykernel>=6.27.0

@@ -1,0 +1,11 @@
+.dashboard-page {
+  min-height: calc(100vh - 4rem);
+  background: var(--background);
+  padding: 2rem 0;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 1rem 0;
+  }
+}
