@@ -74,10 +74,8 @@ database/
 .coverage
 htmlcov/
 
-# Documentation
-*.md
-!README.md
-!VERCEL_DEPLOYMENT.md
+# Documentation (exclude only specific patterns)
+# Note: Keep deployment guides and README
 
 # Notebooks
 *.ipynb
