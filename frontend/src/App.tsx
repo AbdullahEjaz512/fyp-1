@@ -7,6 +7,9 @@ import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
 import ResultsPage from './pages/ResultsPage';
+import AssistantPage from './pages/AssistantPage';
+import VisualizationPage from './pages/VisualizationPage';
+import Reconstruction3DPage from './pages/Reconstruction3DPage';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -55,6 +58,18 @@ function App() {
               <Route
                 path="/results"
                 element={isAuthenticated ? <ResultsPage /> : <Navigate to="/" />}
+              />
+              <Route
+                path="/assistant"
+                element={isAuthenticated ? <AssistantPage /> : <Navigate to="/" />}
+              />
+              <Route
+                path="/visualization"
+                element={isAuthenticated ? <VisualizationPage /> : <Navigate to="/" />}
+              />
+              <Route
+                path="/reconstruction"
+                element={isAuthenticated ? <Reconstruction3DPage /> : <Navigate to="/" />}
               />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

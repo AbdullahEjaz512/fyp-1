@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { authService } from '../../services/auth.service';
-import { Brain, Home, LayoutDashboard, Upload, FileText, LogOut, User } from 'lucide-react';
+import { Brain, Home, LayoutDashboard, Upload, FileText, LogOut, User, MessageSquare, Eye, Box } from 'lucide-react';
 import './Navbar.css';
 
 export const Navbar = () => {
@@ -52,6 +52,18 @@ export const Navbar = () => {
             <Link to="/results" className="nav-link">
               <FileText size={18} />
               Results
+            </Link>
+            <Link to="/assistant" className="nav-link">
+              <MessageSquare size={18} />
+              Assistant
+            </Link>
+            <Link to="/visualization" className="nav-link">
+              <Eye size={18} />
+              2D Visualization
+            </Link>
+            <Link to="/reconstruction" className="nav-link">
+              <Box size={18} />
+              3D Reconstruction
             </Link>
           </div>
         )}

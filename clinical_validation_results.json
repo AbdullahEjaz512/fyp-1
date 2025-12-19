@@ -1,0 +1,41 @@
+{
+  "segmentation": {
+    "model_type": "U-Net 3D",
+    "parameters": 12872425,
+    "device": "cpu",
+    "in_channels": 4,
+    "out_channels": 4,
+    "classes": [
+      "Background",
+      "NCR",
+      "ED",
+      "ET"
+    ]
+  },
+  "classification": {
+    "model_type": "ResNet50",
+    "parameters": 24692612,
+    "device": "cpu",
+    "num_classes": 4,
+    "classes": [
+      "Glioblastoma (GBM)",
+      "Low-Grade Glioma (LGG)",
+      "Meningioma",
+      "Healthy/Other"
+    ]
+  },
+  "growth_prediction": {
+    "model_type": "LSTM",
+    "epochs": 143,
+    "val_mae": 1.2321027219295502,
+    "val_loss": 9.006075203418732,
+    "training_patients": 200,
+    "training_scans": 2066,
+    "tumor_types": {
+      "Glioblastoma (GBM)": 105,
+      "Meningioma": 41,
+      "Low-Grade Glioma (LGG)": 54
+    }
+  },
+  "timestamp": "2025-12-19T00:52:36.061861"
+}

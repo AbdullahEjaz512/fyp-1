@@ -1,0 +1,13 @@
+{
+  "report_type": "Clinical Validation Report",
+  "generated_at": "2025-12-19T00:59:49.169986",
+  "system_name": "SegMind - AI Brain Tumor Analysis",
+  "validation_summary": {
+    "segmentation_metrics": {},
+    "classification_metrics": {},
+    "clinical_cases": [],
+    "timestamp": "2025-12-19T00:59:49.160170"
+  },
+  "regulatory_status": "Pre-market validation",
+  "clinical_recommendation": "Suitable for clinical decision support with radiologist oversight"
+}

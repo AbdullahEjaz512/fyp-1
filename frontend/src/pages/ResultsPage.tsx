@@ -22,7 +22,8 @@ export default function ResultsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const fileId = searchParams.get('fileId');
+  // Prefer explicit query param, fall back to last viewed file so viz pages work after refresh
+  const fileId = searchParams.get('fileId') || localStorage.getItem('lastFileId');
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
   
@@ -39,6 +40,9 @@ export default function ResultsPage() {
   // Reset selected analysis when data changes
   useEffect(() => {
     setSelectedAnalysisIndex(0);
+    if (resultsData?.file_id) {
+      localStorage.setItem('lastFileId', resultsData.file_id.toString());
+    }
   }, [resultsData]);
 
   if (!fileId) {

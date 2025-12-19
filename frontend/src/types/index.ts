@@ -106,6 +106,24 @@ export interface DoctorAssessment {
   next_appointment?: string;
 }
 
+export interface EnsembleUncertainty {
+  mean_confidence?: number;
+  mean_entropy?: number;
+  epistemic_uncertainty?: number;
+  quality_flags?: {
+    high_confidence?: boolean;
+    low_uncertainty?: boolean;
+    recommended_for_clinical_use?: boolean;
+    requires_expert_review?: boolean;
+  };
+}
+
+export interface EnsembleData {
+  enabled: boolean;
+  segmentation_uncertainty?: EnsembleUncertainty;
+  classification_uncertainty?: EnsembleUncertainty;
+}
+
 export interface AnalysisResult {
   file_id: number;
   analysis_id: number;
@@ -126,6 +144,7 @@ export interface AnalysisResult {
   note?: string;
   doctor_info?: DoctorInfo;
   doctor_assessment?: DoctorAssessment;
+  ensemble?: EnsembleData;
 }
 
 export interface Doctor {

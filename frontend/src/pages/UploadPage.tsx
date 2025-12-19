@@ -127,6 +127,7 @@ export default function UploadPage() {
   const handleAnalyze = async (fileId: number) => {
     try {
       await analyzeMutation.mutateAsync(fileId);
+      localStorage.setItem('lastFileId', fileId.toString());
       // Navigate directly to results page after successful analysis
       navigate(`/results?fileId=${fileId}`);
     } catch (error: any) {
@@ -135,6 +136,7 @@ export default function UploadPage() {
   };
 
   const handleViewResults = (fileId: number) => {
+    localStorage.setItem('lastFileId', fileId.toString());
     navigate(`/results?fileId=${fileId}`);
   };
 

@@ -28,7 +28,9 @@ export const fileService = {
   },
 
   async deleteFile(fileId: number): Promise<{ message: string }> {
-    const response = await api.delete(`/api/v1/mri/files/${fileId}`);
+    const response = await api.delete(`/api/v1/mri/files/${fileId}`, {
+      timeout: 30000, // 30 second timeout to prevent infinite hanging
+    });
     return response.data;
   },
 

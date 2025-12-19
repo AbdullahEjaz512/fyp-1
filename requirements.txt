@@ -39,10 +39,19 @@ seaborn>=0.12.0
 # Report Generation
 reportlab>=4.0.0
 Pillow>=10.0.0
+jinja2>=3.1.0
 
 # Explainable AI
 shap>=0.43.0
 grad-cam>=1.4.0
+
+# RAG and Embeddings
+sentence-transformers>=2.2.0
+faiss-cpu>=1.7.4
+
+# 3D Reconstruction and Mesh Processing
+numpy-stl>=3.0.0
+trimesh>=4.0.0
 
 # Database & Cloud
 sqlalchemy>=2.0.0

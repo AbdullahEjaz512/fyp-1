@@ -47,6 +47,11 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
       queryClient.invalidateQueries({ queryKey: ['files'] });
       setDeletingFileId(null);
     },
+    onError: (error: any) => {
+      console.error('Delete failed:', error);
+      alert(`Failed to delete file: ${error?.response?.data?.detail || error.message || 'Unknown error'}`);
+      setDeletingFileId(null);
+    },
   });
 
   const downloadMutation = useMutation({
@@ -69,7 +74,12 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
   const handleDelete = async (fileId: number) => {
     if (window.confirm('Are you sure you want to delete this file?')) {
       setDeletingFileId(fileId);
-      await deleteMutation.mutateAsync(fileId);
+      try {
+        await deleteMutation.mutateAsync(fileId);
+      } catch (error) {
+        // Error already handled in onError callback
+        console.error('Delete mutation error:', error);
+      }
     }
   };
 

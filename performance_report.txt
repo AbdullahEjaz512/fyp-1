@@ -1,0 +1,45 @@
+================================================================================
+SEGMIND PERFORMANCE BENCHMARK REPORT
+Generated: 2025-12-19 00:54:43
+================================================================================
+
+📡 API ENDPOINT PERFORMANCE
+--------------------------------------------------------------------------------
+Endpoint                                           Mean       Median     Min       
+--------------------------------------------------------------------------------
+POST /users/login                                  2.048s    2.043s    2.011s
+GET /files/list                                    2.046s    2.046s    2.036s
+GET /visualization/multiview/74                    2.045s    2.047s    2.029s
+GET /visualization/montage/74                      2.049s    2.049s    2.045s
+GET /xai/gradcam/74                                2.037s    2.036s    2.035s
+GET /reconstruction/viewer-data/74                 2.052s    2.050s    2.043s
+
+💾 DATABASE QUERY PERFORMANCE
+--------------------------------------------------------------------------------
+Query                                    Mean            Rows      
+--------------------------------------------------------------------------------
+Count Files                              1.8ms         1
+Recent Files                             2.4ms         20
+Files with Analysis                      3.9ms         20
+Doctor Access Check                      1.9ms         20
+Collaboration Lookup                     0.6ms         1
+
+🎯 PERFORMANCE SUMMARY
+--------------------------------------------------------------------------------
+Average API Response Time: 2.046s
+Slowest API Endpoint: GET /reconstruction/viewer-data/74 (2.052s)
+Average DB Query Time: 2.1ms
+Slowest DB Query: Files with Analysis (3.9ms)
+
+💡 OPTIMIZATION RECOMMENDATIONS
+--------------------------------------------------------------------------------
+⚠️ Slow API Endpoints (>2s):
+   - POST /users/login: 2.048s - Consider caching or optimization
+   - GET /files/list: 2.046s - Consider caching or optimization
+   - GET /visualization/multiview/74: 2.045s - Consider caching or optimization
+   - GET /visualization/montage/74: 2.049s - Consider caching or optimization
+   - GET /xai/gradcam/74: 2.037s - Consider caching or optimization
+   - GET /reconstruction/viewer-data/74: 2.052s - Consider caching or optimization
+✅ All database queries performing well (<100ms)
+
+================================================================================

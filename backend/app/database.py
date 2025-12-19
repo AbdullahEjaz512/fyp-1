@@ -209,6 +209,25 @@ class CaseDiscussion(Base):
     replies = relationship("CaseDiscussion", backref="parent", remote_side=[discussion_id])
 
 
+class AuditLog(Base):
+    """Audit log entries for sensitive data access and security events"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(128), nullable=True, index=True)
+    role = Column(String(50), nullable=True)
+    action = Column(String(255), nullable=False)
+    resource_type = Column(String(100), nullable=True)
+    resource_id = Column(String(255), nullable=True, index=True)
+    method = Column(String(10), nullable=True)
+    path = Column(String(255), nullable=True, index=True)
+    status_code = Column(Integer, nullable=True)
+    ip_address = Column(String(64), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP, default=datetime.utcnow, index=True)
+    extra = Column(JSONB, nullable=True)
+
+
 # ============= Database Helper Functions =============
 
 def get_db():

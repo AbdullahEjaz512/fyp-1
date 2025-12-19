@@ -3,20 +3,22 @@
   top: 0;
   left: 0;
   right: 0;
-  background: white;
+  min-height: 64px;
+  background: rgba(255, 255, 255, 0.96);
   border-bottom: 1px solid var(--border);
   z-index: 1000;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(6px);
 }
 
 .nav-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
 .nav-brand {
