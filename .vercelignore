@@ -1,0 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Machine Learning Models & Data (too large for Vercel)
+*.pth
+*.h5
+*.pkl
+*.npy
+*.npz
+ml_models/classification/checkpoints/
+ml_models/segmentation/checkpoints/
+
+# Medical Imaging Data (should not be in git anyway)
+*.nii
+*.nii.gz
+*.dcm
+*.dicom
+data/uploads/
+data/processed/
+data/raw/
+data/classification_dataset/
+data/classification_dataset_ARTIFICIAL/
+
+# Images
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (frontend)
+node_modules/
+frontend/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentation (exclude only specific patterns)
+# Note: Keep deployment guides and README
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Scripts
+*.bat
+*.ps1
+*.sh
+
+# Test files
+test_*.py
+*_test.py
+tests/
