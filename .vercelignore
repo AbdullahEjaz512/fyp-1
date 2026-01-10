@@ -1,4 +1,4 @@
-# Python
+# Python - Ignore all backend code (deployed on Railway)
 __pycache__/
 *.py[cod]
 *$py.class
@@ -7,6 +7,12 @@ __pycache__/
 venv/
 env/
 ENV/
+pyproject.toml
+backend/
+api/
+ml_models/
+database/
+*.py
 
 # Machine Learning Models & Data (too large for Vercel)
 *.pth
