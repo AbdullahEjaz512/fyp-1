@@ -16,6 +16,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies (use repo root requirements)
 COPY requirements.txt /app/requirements.txt
+# Install CPU-only PyTorch first to save memory and storage on Railway
+RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy backend app and ML modules used by the API
