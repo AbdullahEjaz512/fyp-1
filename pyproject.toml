@@ -7,7 +7,7 @@ authors = [
 ]
 requires-python = ">=3.9"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 
 dependencies = [
     "fastapi>=0.104.0",
@@ -26,6 +26,9 @@ dev = [
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["api"]
 
 [tool.black]
 line-length = 100
