@@ -10,6 +10,7 @@ import ResultsPage from './pages/ResultsPage';
 import AssistantPage from './pages/AssistantPage';
 import VisualizationPage from './pages/VisualizationPage';
 import Reconstruction3DPage from './pages/Reconstruction3DPage';
+import GrowthPredictionPage from './pages/GrowthPredictionPage';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -70,6 +71,10 @@ function App() {
               <Route
                 path="/reconstruction"
                 element={isAuthenticated ? <Reconstruction3DPage /> : <Navigate to="/" />}
+              />
+              <Route
+                path="/growth-prediction"
+                element={isAuthenticated ? <GrowthPredictionPage /> : <Navigate to="/" />}
               />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>

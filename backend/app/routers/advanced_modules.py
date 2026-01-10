@@ -276,19 +276,13 @@ def visualize_slice(
 
     try:
         logger.info(f"Visualizing slice: file_id={file_id}, slice_idx={slice_idx}, axis={axis}")
-        try:
-            volume, segmentation, _ = _load_volume_and_segmentation(
-                service,
-                file_id,
-                db,
-                user,
-                include_segmentation=include_seg
-            )
-        except Exception as e:
-            logger.warning(f"Failed to load real volume, using dummy data: {e}")
-            # Fallback to dummy data
-            volume = np.random.rand(128, 128, 128)
-            segmentation = None
+        volume, segmentation, _ = _load_volume_and_segmentation(
+            service,
+            file_id,
+            db,
+            user,
+            include_segmentation=include_seg
+        )
 
         # Clamp slice index within bounds
         max_idx = volume.shape[axis] - 1
@@ -344,18 +338,13 @@ def visualize_multiview(
     
     try:
         logger.info(f"Visualizing multiview: file_id={file_id}, center_coords={center_coords}")
-        try:
-            volume, segmentation, _ = _load_volume_and_segmentation(
-                service,
-                file_id,
-                db,
-                user,
-                include_segmentation=include_seg
-            )
-        except Exception as e:
-            logger.warning(f"Failed to load real volume, using dummy data: {e}")
-            volume = np.random.rand(128, 128, 128)
-            segmentation = None
+        volume, segmentation, _ = _load_volume_and_segmentation(
+            service,
+            file_id,
+            db,
+            user,
+            include_segmentation=include_seg
+        )
 
         if center_coords is None:
             center_coords = tuple(int(s // 2) for s in volume.shape[:3])
@@ -400,17 +389,13 @@ def visualize_montage(
     
     try:
         logger.info(f"Visualizing montage: file_id={file_id}, num_slices={num_slices}, axis={axis}")
-        try:
-            volume, _, _ = _load_volume_and_segmentation(
-                service,
-                file_id,
-                db,
-                user,
-                include_segmentation=False
-            )
-        except Exception as e:
-            logger.warning(f"Failed to load real volume, using dummy data: {e}")
-            volume = np.random.rand(128, 128, 128)
+        volume, _, _ = _load_volume_and_segmentation(
+            service,
+            file_id,
+            db,
+            user,
+            include_segmentation=False
+        )
         
         logger.info(f"Volume shape: {volume.shape}")
         logger.info("Creating montage...")
@@ -450,17 +435,13 @@ def visualize_3d_projection(
     
     try:
         logger.info(f"Visualizing 3D projection: file_id={file_id}, method={method}")
-        try:
-            volume, _, _ = _load_volume_and_segmentation(
-                service,
-                file_id,
-                db,
-                user,
-                include_segmentation=False
-            )
-        except Exception as e:
-            logger.warning(f"Failed to load real volume, using dummy data: {e}")
-            volume = np.random.rand(128, 128, 128)
+        volume, _, _ = _load_volume_and_segmentation(
+            service,
+            file_id,
+            db,
+            user,
+            include_segmentation=False
+        )
         
         logger.info(f"Volume shape: {volume.shape}")
         logger.info("Creating 3D projection...")

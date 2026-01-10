@@ -214,24 +214,13 @@ class MRIVisualizationService:
         
         x, y, z = center_coords
         
-        # Check if volume is effectively 2D (only 1 slice in depth)
-        is_2d = volume.shape[2] == 1
-        
-        if is_2d:
-            # For 2D images, only show axial view
-            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            axes = [ax]
-            views = [
-                ('Axial View', self.extract_slice(volume, z, axis=2), 2)
-            ]
-        else:
-            # For 3D volumes, show all three views
-            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-            views = [
-                ('Sagittal', self.extract_slice(volume, x, axis=0), 0),
-                ('Coronal', self.extract_slice(volume, y, axis=1), 1),
-                ('Axial', self.extract_slice(volume, z, axis=2), 2)
-            ]
+        # Always show all three views for consistency
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        views = [
+            ('Sagittal', self.extract_slice(volume, x, axis=0), 0),
+            ('Coronal', self.extract_slice(volume, y, axis=1), 1),
+            ('Axial', self.extract_slice(volume, z, axis=2), 2)
+        ]
         
         for (title, slice_2d, axis_idx), ax in zip(views, axes):
             ax.imshow(slice_2d, cmap='gray', aspect='auto')
@@ -375,40 +364,28 @@ class MRIVisualizationService:
         if not MATPLOTLIB_AVAILABLE:
             raise RuntimeError("Matplotlib not available for visualization")
         
-        # Check if this is a 2D image (single slice in z-axis)
-        is_2d = volume.shape[2] == 1
-        
+        # Always generate all three projections for consistency
         if method == 'mip':
             # Maximum intensity projection from three angles
             proj_axial = np.max(volume, axis=2)
-            if not is_2d:
-                proj_coronal = np.max(volume, axis=1)
-                proj_sagittal = np.max(volume, axis=0)
+            proj_coronal = np.max(volume, axis=1)
+            proj_sagittal = np.max(volume, axis=0)
         else:  # average
             proj_axial = np.mean(volume, axis=2)
-            if not is_2d:
-                proj_coronal = np.mean(volume, axis=1)
-                proj_sagittal = np.mean(volume, axis=0)
+            proj_coronal = np.mean(volume, axis=1)
+            proj_sagittal = np.mean(volume, axis=0)
         
-        if is_2d:
-            # For 2D images, show only the axial projection (the meaningful one)
-            fig, ax = plt.subplots(1, 1, figsize=(8, 8))
-            proj_norm = self.normalize_intensity(proj_axial)
-            ax.imshow(proj_norm, cmap='hot', aspect='auto')
-            method_label = 'MIP' if method == 'mip' else 'Average'
-            ax.set_title(f'Axial {method_label}', fontsize=14, fontweight='bold')
-            ax.axis('off')
-        else:
-            # For 3D volumes, show all three projections
-            fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-            
-            projections = [
-                ('Axial MIP', proj_axial),
-                ('Coronal MIP', proj_coronal),
-                ('Sagittal MIP', proj_sagittal)
-            ]
-            
-            for (title, proj), ax in zip(projections, axes):
+        # Always show all three projections
+        fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+        
+        method_label = 'MIP' if method == 'mip' else 'Average'
+        projections = [
+            (f'Sagittal {method_label}', proj_sagittal),
+            (f'Coronal {method_label}', proj_coronal),
+            (f'Axial {method_label}', proj_axial)
+        ]
+        
+        for (title, proj), ax in zip(projections, axes):
                 proj_norm = self.normalize_intensity(proj)
                 ax.imshow(proj_norm, cmap='hot', aspect='auto')
                 ax.set_title(title, fontsize=12, fontweight='bold')
