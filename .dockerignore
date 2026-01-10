@@ -1,0 +1,26 @@
+# Ignore VCS and cache
+.git
+.gitignore
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Local envs and OS junk
+.env
+venv/
+.env.*
+.DS_Store
+Thumbs.db
+
+# Not needed in backend image
+frontend/
+notebooks/
+logs/
+*.log
+.data/
+data/
+
+# Node modules (if present)
+**/node_modules/
