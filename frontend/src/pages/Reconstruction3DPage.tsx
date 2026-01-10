@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import './Reconstruction3DPage.css';
+import { API_BASE_URL } from '../config/api';
 
 // Import icons
 import { Box, Download, Eye, Settings, RefreshCw } from 'lucide-react';
@@ -75,7 +76,7 @@ const Reconstruction3DPage: React.FC = () => {
       const token = localStorage.getItem('authToken');
       
       const response = await fetch(
-        `http://localhost:8000/api/v1/reconstruction/viewer-data/${fileParam}?format=${viewerType}`,
+        `${API_BASE_URL}/api/v1/reconstruction/viewer-data/${fileParam}?format=${viewerType}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -128,7 +129,7 @@ const Reconstruction3DPage: React.FC = () => {
       const token = localStorage.getItem('authToken');
       
       const response = await fetch(
-        `http://localhost:8000/api/v1/reconstruction/stats/${fileParam}`,
+        `${API_BASE_URL}/api/v1/reconstruction/stats/${fileParam}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -378,7 +379,7 @@ const Reconstruction3DPage: React.FC = () => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `http://localhost:8000/api/v1/reconstruction/export/stl/${fileParam}/${region}`,
+        `${API_BASE_URL}/api/v1/reconstruction/export/stl/${fileParam}/${region}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -404,7 +405,7 @@ const Reconstruction3DPage: React.FC = () => {
     try {
       const token = localStorage.getItem('authToken');
       const response = await fetch(
-        `http://localhost:8000/api/v1/reconstruction/export/obj/${fileParam}/${region}`,
+        `${API_BASE_URL}/api/v1/reconstruction/export/obj/${fileParam}/${region}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`

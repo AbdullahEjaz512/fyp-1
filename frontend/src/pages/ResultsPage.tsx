@@ -7,6 +7,7 @@ import { AnalysisResults } from '../components/analysis/AnalysisResults';
 import { DoctorAssessmentView } from '../components/analysis/DoctorAssessment';
 import { DoctorAssessmentForm } from '../components/analysis/DoctorAssessmentForm';
 import { ShareCaseModal, CollaborationPanel, DiscussionThread } from '../components/collaboration';
+import { API_BASE_URL } from '../config/api';
 import { 
   FileText, 
   AlertCircle, 
@@ -62,7 +63,7 @@ export default function ResultsPage() {
       };
       
       // Call assistant API to generate PDF report
-      const response = await fetch('http://localhost:8000/api/v1/assistant/report/pdf', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/assistant/report/pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +96,7 @@ export default function ResultsPage() {
       setXaiLoading(true);
       
       // Load classification explanation
-      const classResponse = await fetch('http://localhost:8000/api/v1/advanced/explain/classification', {
+      const classResponse = await fetch(`${API_BASE_URL}/api/v1/advanced/explain/classification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
