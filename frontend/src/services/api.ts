@@ -1,7 +1,19 @@
 import axios from 'axios';
 
 // Use environment variable for API URL (set in Vercel), fallback to localhost for dev
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const ENV_API_URL = import.meta.env.VITE_API_URL;
+const IS_PROD = import.meta.env.PROD;
+const FALLBACK_URL = IS_PROD 
+  ? 'https://fyp-1-production.up.railway.app' 
+  : 'http://127.0.0.1:8000';
+
+export const API_BASE_URL = ENV_API_URL || FALLBACK_URL;
+
+console.log('🔌 API Configuration:', { 
+  envUrl: ENV_API_URL, 
+  isProd: IS_PROD, 
+  finalUrl: API_BASE_URL 
+});
 
 const api = axios.create({
   baseURL: API_BASE_URL,
