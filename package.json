@@ -2,5 +2,8 @@
   "private": true,
   "name": "fyp-monorepo",
   "version": "1.0.0",
-  "description": "Frontend in ./frontend, Backend deployed separately on Railway"
+  "description": "Frontend in ./frontend, Backend deployed separately on Railway",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  }
 }
