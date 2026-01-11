@@ -13,6 +13,19 @@
   overflow-y: hidden;
 }
 
+.navbar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.navbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.navbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .nav-container {
   max-width: 1400px;
   min-width: max-content;
@@ -31,6 +44,7 @@
   text-decoration: none;
   color: var(--primary);
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .nav-brand svg {
