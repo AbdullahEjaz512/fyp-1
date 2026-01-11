@@ -17,10 +17,7 @@ import {
   Calendar,
   UserPlus,
   Download,
-  Lightbulb,
-  Eye,
-  Box,
-  TrendingUp
+  Lightbulb
 } from 'lucide-react';
 import './ResultsPage.css';
 
