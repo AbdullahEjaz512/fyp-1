@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "name": "fyp-monorepo",
+  "version": "1.0.0",
+  "description": "Frontend in ./frontend, Backend deployed separately on Railway"
+}
