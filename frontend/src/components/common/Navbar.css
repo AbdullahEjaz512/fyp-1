@@ -74,8 +74,6 @@
   gap: 0.5rem;
   flex: 1;
   justify-content: center;
-  flex-wrap: nowrap;
-  white-space: nowrap;
 }
 
 .nav-link {
@@ -139,7 +137,7 @@
   font-size: 0.875rem;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1024px) {
   .nav-links {
     gap: 0.25rem;
   }
@@ -148,38 +146,13 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
   }
-  
-  .nav-link svg {
-    display: none;
-  }
 }
 
-@media (max-width: 1024px) {
-  .nav-link {
-    padding: 0.5rem 0.5rem;
-    font-size: 0.8rem;
+@media (max-width: 768px) {
+  .nav-container {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
   }
-  
-  .brand-tagline {
-    display: none;
-    gap: 0.5rem;
-  }
-  
-  .nav-link {
-    padding: 0.5rem 0.75rem;
-  }
-  
-  .user-info div {
-    display: none;
-  }
-  
-  .user-menu {
-    gap: 0.5rem;
-  }
-  
-  .btn-sm {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem
   
   .nav-links {
     order: 3;
