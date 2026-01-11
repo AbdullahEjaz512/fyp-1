@@ -9,10 +9,13 @@
   z-index: 1000;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   backdrop-filter: blur(6px);
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .nav-container {
   max-width: 1400px;
+  min-width: max-content;
   margin: 0 auto;
   padding: 0.75rem 1.5rem;
   display: flex;
@@ -57,6 +60,8 @@
   gap: 0.5rem;
   flex: 1;
   justify-content: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .nav-link {
@@ -85,6 +90,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .user-menu {
@@ -119,7 +125,7 @@
   font-size: 0.875rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1400px) {
   .nav-links {
     gap: 0.25rem;
   }
@@ -128,13 +134,38 @@
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
   }
+  
+  .nav-link svg {
+    display: none;
+  }
 }
 
-@media (max-width: 768px) {
-  .nav-container {
-    padding: 0.75rem 1rem;
-    flex-wrap: wrap;
+@media (max-width: 1024px) {
+  .nav-link {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.8rem;
   }
+  
+  .brand-tagline {
+    display: none;
+    gap: 0.5rem;
+  }
+  
+  .nav-link {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .user-info div {
+    display: none;
+  }
+  
+  .user-menu {
+    gap: 0.5rem;
+  }
+  
+  .btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem
   
   .nav-links {
     order: 3;
