@@ -165,7 +165,8 @@ def get_growth_history(
 @router.post("/explain/classification")
 def explain_classification(
     body: dict,
-    user=Depends(get_current_user)
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Generate Grad-CAM explanation for classification prediction
@@ -177,41 +178,118 @@ def explain_classification(
         "method": "gradcam" or "shap"
     }
     """
-    service = get_xai_service()
-    
     file_id = body.get("file_id")
     target_class = body.get("target_class")
     method = body.get("method", "gradcam")
     
-    # In production, load actual image data from file_id
-    # For now, return placeholder
-    
     try:
-        # Dummy image data
-        import numpy as np
-        dummy_image = np.random.rand(128, 128, 1)
+        # Get file and analysis results
+        db_file = db.query(DBFile).filter(DBFile.file_id == file_id).first()
+        if not db_file:
+            raise HTTPException(status_code=404, detail="File not found")
         
-        result = service.explain_classification(dummy_image, target_class, method)
+        # Get analysis result
+        analysis = db.query(AnalysisResult).filter(
+            AnalysisResult.file_id == file_id
+        ).first()
         
-        if 'error' in result:
-            raise HTTPException(status_code=500, detail=result['error'])
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Analysis not found for this file")
         
-        # Convert arrays to lists for JSON serialization
-        if 'heatmap' in result:
-            result['heatmap'] = result['heatmap'].tolist()
-        if 'overlay' in result:
-            result['overlay'] = result['overlay'].tolist()
+        # Try to generate real XAI
+        try:
+            service = get_xai_service()
+            
+            # Load actual MRI data
+            import nibabel as nib
+            from pathlib import Path
+            
+            # Get the processed file path
+            data_dir = Path("data/processed") / str(file_id)
+            nii_files = list(data_dir.glob("*.nii.gz"))
+            
+            if nii_files:
+                # Load middle slice from the scan
+                img = nib.load(str(nii_files[0]))
+                data = img.get_fdata()
+                
+                # Get middle slice
+                mid_slice = data.shape[2] // 2
+                slice_data = data[:, :, mid_slice]
+                
+                # Normalize
+                slice_data = (slice_data - slice_data.min()) / (slice_data.max() - slice_data.min() + 1e-8)
+                slice_data = np.expand_dims(slice_data, axis=-1)
+                
+                result = service.explain_classification(slice_data, target_class, method)
+                
+                if 'error' not in result:
+                    # Convert arrays to lists/base64 for JSON
+                    import base64
+                    from io import BytesIO
+                    from PIL import Image
+                    
+                    if 'overlay' in result:
+                        overlay_img = (result['overlay'] * 255).astype(np.uint8)
+                        pil_img = Image.fromarray(overlay_img)
+                        buffer = BytesIO()
+                        pil_img.save(buffer, format='PNG')
+                        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
+                        
+                        return {
+                            "file_id": file_id,
+                            "method": method,
+                            "target_class": analysis.tumor_type,
+                            "heatmap_base64": heatmap_base64,
+                            "confidence": analysis.confidence
+                        }
+        except Exception as xai_error:
+            logger.warning(f"Real XAI failed, using mock: {xai_error}")
+        
+        # Fallback: Generate mock heatmap
+        import base64
+        from PIL import Image, ImageDraw
+        from io import BytesIO
+        
+        # Create a 256x256 mock heatmap
+        img = Image.new('RGB', (256, 256), color='black')
+        draw = ImageDraw.Draw(img)
+        
+        # Draw a gradient circle to simulate heatmap
+        center_x, center_y = 128, 128
+        max_radius = 80
+        
+        for radius in range(max_radius, 0, -5):
+            intensity = int(255 * (1 - radius / max_radius))
+            color = (intensity, intensity // 2, 0)  # Red-yellow gradient
+            draw.ellipse(
+                [center_x - radius, center_y - radius, center_x + radius, center_y + radius],
+                fill=color
+            )
+        
+        # Add text overlay
+        draw.text((10, 10), "Demo Heatmap", fill=(255, 255, 255))
+        draw.text((10, 235), f"Method: {method.upper()}", fill=(255, 255, 255))
+        
+        # Convert to base64
+        buffer = BytesIO()
+        img.save(buffer, format='PNG')
+        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
         
         return {
             "file_id": file_id,
             "method": method,
-            "explanation": result
+            "target_class": analysis.tumor_type,
+            "heatmap_base64": heatmap_base64,
+            "confidence": analysis.confidence,
+            "note": "This is a demonstration heatmap. Full XAI requires trained models in production."
         }
     
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Explanation failed: {e}")
+        logger.error(f"Explanation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Explanation failed: {str(e)}")
 
 
 @router.post("/explain/segmentation")
