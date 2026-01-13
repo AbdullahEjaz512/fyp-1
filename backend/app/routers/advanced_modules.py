@@ -210,15 +210,20 @@ def explain_classification(
 
         # ----- Safe demo heatmap (bypass heavy dependencies in production) -----
         # This avoids failures when pillow/nibabel/torch aren't available on the host.
+        
+        # Get attributes safely to handle potential schema variations
+        target_cls = getattr(analysis, 'classification_type', None) or getattr(analysis, 'tumor_type', 'Unknown')
+        conf_val = getattr(analysis, 'classification_confidence', None) or getattr(analysis, 'confidence', 0.0)
+        
         demo_heatmap_base64 = (
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAgMBg1Vlz1sAAAAASUVORK5CYII="
         )
         return {
             "file_id": file_id,
             "method": method,
-            "target_class": analysis.classification_type,
+            "target_class": target_cls,
             "heatmap_base64": demo_heatmap_base64,
-            "confidence": analysis.classification_confidence,
+            "confidence": conf_val,
             "note": "Using demo heatmap because XAI dependencies are unavailable in production."
         }
         
