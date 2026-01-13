@@ -116,13 +116,18 @@ export default function ResultsPage() {
         })
       });
       
+      if (!classResponse.ok) {
+        throw new Error(`HTTP error! status: ${classResponse.status}`);
+      }
+      
       const classData = await classResponse.json();
+      console.log('XAI Data received:', classData); // Debug
       setXaiData(classData);
       setShowXAI(true);
       
     } catch (err) {
       console.error('XAI loading failed:', err);
-      alert('Failed to load explainability visualization');
+      alert('Failed to load explainability visualization. The AI model may not be available.');
     } finally {
       setXaiLoading(false);
     }

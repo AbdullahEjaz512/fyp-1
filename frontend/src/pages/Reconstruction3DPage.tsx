@@ -5,12 +5,14 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { fileService } from '../services/file.service';
 import './Reconstruction3DPage.css';
 import { API_BASE_URL } from '../config/api';
 
 // Import icons
-import { Box, Download, Eye, Settings, RefreshCw } from 'lucide-react';
+import { Box, Download, Eye, Settings, RefreshCw, FileText, Calendar } from 'lucide-react';
 
 // Will use VTK.js for medical visualization
 // Install: npm install @kitware/vtk.js
@@ -69,6 +71,15 @@ const Reconstruction3DPage: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleRegions, wireframe, backgroundColor, autoRotate]);
   
+  // Query for file list when no file is selected
+  const { data: files } = useQuery({
+    queryKey: ['files'],
+    queryFn: fileService.listFiles,
+    enabled: !fileParam,
+  });
+
+  const navigate = useNavigate();
+
   const loadMeshData = async () => {
     if (!fileParam) return;
     try {
@@ -428,10 +439,72 @@ const Reconstruction3DPage: React.FC = () => {
   };
   
   if (!fileParam) {
+    const analyzedFiles = files?.filter(f => f.status === 'analyzed') || [];
     return (
       <div className="reconstruction-page">
-        <div className="error-message">
-          <p>No file ID provided</p>
+        <div className="container">
+          <div className="page-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center' }}>
+              <Box size={32} />
+              3D Tumor Reconstruction
+            </h1>
+            <p>Select a file to view 3D reconstruction</p>
+          </div>
+          
+          {analyzedFiles.length === 0 ? (
+            <div className="error-message" style={{ textAlign: 'center', padding: '3rem' }}>
+              <p>No analyzed files found. Please upload and analyze a scan first.</p>
+              <button onClick={() => navigate('/upload')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                Go to Upload
+              </button>
+            </div>
+          ) : (
+            <div className="file-selector" style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <h3 style={{ marginBottom: '1.5rem' }}>Select a Scan:</h3>
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {analyzedFiles.map((file: any) => (
+                  <div
+                    key={file.file_id}
+                    className="file-card"
+                    onClick={() => navigate(`/reconstruction?fileId=${file.file_id}`)}
+                    style={{
+                      background: 'white',
+                      padding: '1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      border: '2px solid #e2e8f0',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#667eea';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <FileText size={24} color="#667eea" />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{file.filename}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b', display: 'flex', gap: '1rem' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Calendar size={14} />
+                            {new Date(file.upload_date).toLocaleDateString()}
+                          </span>
+                          {file.patient_id && <span>Patient: {file.patient_id}</span>}
+                        </div>
+                      </div>
+                      <Box size={20} color="#667eea" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

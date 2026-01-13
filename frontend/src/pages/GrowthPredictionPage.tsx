@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/authStore';
 import { advancedService } from '../services/advanced.service';
 import { fileService } from '../services/file.service';
@@ -32,6 +33,13 @@ export default function GrowthPredictionPage() {
   const [predictionData, setPredictionData] = useState<any>(null);
   const [historicalScans, setHistoricalScans] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  
+  // Query all files to get unique patient IDs
+  const { data: allFiles } = useQuery({
+    queryKey: ['files'],
+    queryFn: fileService.listFiles,
+    enabled: !patientId,
+  });
 
   useEffect(() => {
     if (patientId) {
@@ -105,14 +113,89 @@ export default function GrowthPredictionPage() {
   };
 
   if (!patientId) {
+    // Group files by patient_id and count analyzed scans
+    const patientGroups = allFiles?.reduce((acc: any, file: any) => {
+      const pid = file.patient_id;
+      if (!pid) return acc;
+      if (!acc[pid]) {
+        acc[pid] = { patient_id: pid, files: [], analyzedCount: 0 };
+      }
+      acc[pid].files.push(file);
+      if (file.status === 'analyzed') {
+        acc[pid].analyzedCount++;
+      }
+      return acc;
+    }, {}) || {};
+    
+    const patients = Object.values(patientGroups).filter((p: any) => p.analyzedCount >= 2);
+    
     return (
       <div className="growth-page">
         <div className="container">
-          <div className="error-state">
-            <AlertTriangle size={64} />
-            <h2>No Patient Selected</h2>
-            <p>Please select a patient to view growth predictions</p>
+          <div className="page-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h1>
+              <TrendingUp size={32} />
+              Tumor Growth Prediction
+              <HelpTooltip 
+                title="How Growth Prediction Works" 
+                content="Our LSTM (Long Short-Term Memory) AI model analyzes your historical scans to predict how the tumor will grow over time. This helps doctors plan treatment and monitor progression. Requires at least 2 scans taken at different times." 
+              />
+            </h1>
+            <p>AI-powered analysis of tumor progression over time</p>
           </div>
+          
+          {patients.length === 0 ? (
+            <div className="error-state">
+              <AlertTriangle size={64} />
+              <h2>No Eligible Patients</h2>
+              <p>Growth prediction requires at least 2 analyzed scans for a patient.</p>
+              <button onClick={() => navigate('/upload')} className="btn btn-primary" style={{ marginTop: '1rem' }}>
+                Upload Scans
+              </button>
+            </div>
+          ) : (
+            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+              <h3 style={{ marginBottom: '1.5rem' }}>Select a Patient:</h3>
+              <div style={{ display: 'grid', gap: '1rem' }}>
+                {patients.map((patient: any) => (
+                  <div
+                    key={patient.patient_id}
+                    onClick={() => navigate(`/growth-prediction?patientId=${patient.patient_id}`)}
+                    style={{
+                      background: 'white',
+                      padding: '1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      border: '2px solid #e2e8f0',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#667eea';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                          Patient ID: {patient.patient_id}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                          {patient.analyzedCount} analyzed scans available
+                        </div>
+                      </div>
+                      <TrendingUp size={24} color="#667eea" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
