@@ -68,6 +68,10 @@ export default function GrowthPredictionPage() {
   };
 
   const predictGrowth = async () => {
+    console.log('=== PREDICT GROWTH CALLED ===');
+    console.log('Patient ID:', patientId);
+    console.log('Historical scans count:', historicalScans.length);
+    
     if (historicalScans.length < 2) {
       setError('Need at least 2 historical scans for growth prediction');
       return;
@@ -76,6 +80,7 @@ export default function GrowthPredictionPage() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Starting growth prediction...');
 
       // Prepare historical scan data
       const scans = await Promise.all(
@@ -97,13 +102,25 @@ export default function GrowthPredictionPage() {
         })
       );
 
-      const response = await advancedService.predictGrowth({
+      console.log('Prepared scans data:', scans);
+
+      const payload = {
         patient_id: patientId,
         historical_scans: scans,
         prediction_steps: 3
-      });
+      };
+      
+      console.log('Sending prediction request with payload:', payload);
+      const response = await advancedService.predictGrowth(payload);
+      console.log('Prediction response:', response);
+      console.log('Response data:', response.data);
+
+      if (!response.data) {
+        throw new Error('No data received from prediction service');
+      }
 
       setPredictionData(response.data);
+      console.log('Prediction data set successfully');
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || 'Growth prediction failed. Please try again.';
       setError(errorMessage);
@@ -111,10 +128,12 @@ export default function GrowthPredictionPage() {
       console.error('Error details:', {
         status: err.response?.status,
         data: err.response?.data,
-        message: err.message
+        message: err.message,
+        stack: err.stack
       });
     } finally {
       setLoading(false);
+      console.log('=== PREDICT GROWTH FINISHED ===');
     }
   };
 
@@ -371,7 +390,11 @@ export default function GrowthPredictionPage() {
               <div className="risk-details">
                 <div className="risk-stat">
                   <span>Growth Rate</span>
-                  <strong>{predictionData.growth_rate?.toFixed(2)}%</strong>
+                  <strong>
+                    {typeof predictionData.growth_rate === 'number'
+                      ? `${predictionData.growth_rate.toFixed(2)}%`
+                      : 'N/A'}
+                  </strong>
                 </div>
               </div>
             </div>
@@ -387,15 +410,16 @@ export default function GrowthPredictionPage() {
                 </div>
                 {predictionData.predictions?.map((pred: number, idx: number) => {
                   const interval = predictionData.confidence_intervals?.[idx];
+                  const predValue = typeof pred === 'number' ? pred.toFixed(2) : 'N/A';
+                  const intervalText = interval && typeof interval[0] === 'number' && typeof interval[1] === 'number'
+                    ? `${interval[0].toFixed(2)} - ${interval[1].toFixed(2)} mm³`
+                    : 'N/A';
+
                   return (
                     <div key={idx} className="table-row">
                       <div>Step {idx + 1}</div>
-                      <div>{pred.toFixed(2)} mm³</div>
-                      <div>
-                        {interval ? 
-                          `${interval[0].toFixed(2)} - ${interval[1].toFixed(2)} mm³` 
-                          : 'N/A'}
-                      </div>
+                      <div>{predValue} mm³</div>
+                      <div>{intervalText}</div>
                     </div>
                   );
                 })}
@@ -406,18 +430,24 @@ export default function GrowthPredictionPage() {
             <div className="history-card">
               <h3>Historical Volumes</h3>
               <div className="volume-chart">
-                {predictionData.historical_volumes?.map((vol: number, idx: number) => (
-                  <div key={idx} className="volume-bar">
-                    <div 
-                      className="bar-fill"
-                      style={{ 
-                        height: `${(vol / Math.max(...predictionData.historical_volumes)) * 100}%` 
-                      }}
-                    />
-                    <span className="bar-label">Scan {idx + 1}</span>
-                    <span className="bar-value">{vol.toFixed(0)}</span>
-                  </div>
-                ))}
+                {predictionData.historical_volumes?.map((vol: number, idx: number) => {
+                  const volumes = predictionData.historical_volumes || [];
+                  const numericVolumes = volumes.filter((v: any): v is number => typeof v === 'number');
+                  const maxVol = Math.max(...(numericVolumes.length ? numericVolumes : [1]));
+                  const safeVol = typeof vol === 'number' ? vol : 0;
+                  const heightPct = Math.max(0, (safeVol / maxVol) * 100);
+
+                  return (
+                    <div key={idx} className="volume-bar">
+                      <div 
+                        className="bar-fill"
+                        style={{ height: `${heightPct}%` }}
+                      />
+                      <span className="bar-label">Scan {idx + 1}</span>
+                      <span className="bar-value">{safeVol.toFixed(0)}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

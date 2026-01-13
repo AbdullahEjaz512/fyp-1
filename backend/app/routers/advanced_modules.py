@@ -236,18 +236,28 @@ def explain_classification(
                 result = service.explain_classification(slice_data, target_class, method)
                 
                 if 'error' not in result:
-                    # Convert arrays to lists/base64 for JSON
+                    # Convert arrays to base64 PNG for JSON
                     import base64
                     from io import BytesIO
                     from PIL import Image
                     
+                    heatmap_base64 = None
                     if 'overlay' in result:
                         overlay_img = (result['overlay'] * 255).astype(np.uint8)
                         pil_img = Image.fromarray(overlay_img)
                         buffer = BytesIO()
                         pil_img.save(buffer, format='PNG')
                         heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
-                        
+                    elif 'heatmap' in result:
+                        # Fallback: convert raw heatmap to a colored image
+                        heat = (result['heatmap'] * 255).astype(np.uint8)
+                        pil_img = Image.fromarray(heat)
+                        pil_img = pil_img.convert('L').resize((256, 256))
+                        buffer = BytesIO()
+                        pil_img.save(buffer, format='PNG')
+                        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
+                    
+                    if heatmap_base64:
                         return {
                             "file_id": file_id,
                             "method": method,
