@@ -28,12 +28,25 @@ body {
 .app {
   min-height: 100vh;
   display: flex;
+  flex-direction: row;
+}
+
+.app-layout {
+  flex: 1;
+  display: flex;
   flex-direction: column;
+  margin-left: 260px;
+  transition: margin-left 0.3s ease;
+}
+
+.app-layout.sidebar-collapsed {
+  margin-left: 70px;
 }
 
 .main-content {
   flex: 1;
-  padding-top: 4rem;
+  padding: 2rem;
+  overflow-y: auto;
 }
 
 .loading-screen {
@@ -230,6 +243,21 @@ button {
 
 .items-center {
   align-items: center;
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+  .app-layout {
+    margin-left: 0 !important;
+  }
+  
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .container {
+    padding: 1rem;
+  }
 }
 
 .justify-between {

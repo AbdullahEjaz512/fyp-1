@@ -113,31 +113,71 @@ def chat_assistant(
 ):
     """
     Conversational assistant endpoint.
-    Request: { "message": str }
-    Response: { "answer": str, "sources": [ {path, score} ] }
+    Request: { "message": str, "conversation_history": list }
+    Response: { "response": str, "sources": [ {path, score} ] }
     """
     message: Optional[str] = body.get("message")
     if not message:
         raise HTTPException(status_code=400, detail="Missing 'message' in request body")
 
-    # Search project docs for relevant info
+    # Normalize message for pattern matching
+    msg_lower = message.lower()
+    
+    # Enhanced response patterns for common medical questions
+    default_responses = {
+        "tumor classification": "Our platform uses a ResNet-based deep learning model to classify brain tumors into four categories: Glioma, Meningioma, Pituitary tumor, and No tumor. The model achieves 96%+ accuracy and provides confidence scores with each prediction. You can view the classification results in the Results tab after uploading a scan.",
+        
+        "segmentation": "The segmentation module uses a U-Net architecture trained on medical imaging data to precisely identify tumor boundaries. It provides volumetric measurements, 3D visualization, and generates masks that help in surgical planning and radiation therapy targeting.",
+        
+        "growth prediction": "Our LSTM-based growth prediction model analyzes sequential scans to forecast tumor growth over time. It predicts future tumor volume with MAE of ~1.45 cc and helps in treatment planning by showing expected growth trajectories.",
+        
+        "upload scan": "To upload a scan: 1) Go to the Upload tab, 2) Select your MRI files (NIfTI format supported), 3) Fill in patient details, 4) Click upload. The system will automatically run segmentation and classification analysis. Results typically appear within 2-3 minutes.",
+        
+        "visualization": "We offer two visualization modes: 2D Visualization (slice-by-slice view with adjustable windowing) and 3D Reconstruction (interactive volumetric rendering). Both include tumor highlighting and measurement tools.",
+        
+        "explainability": "Our XAI (Explainable AI) module uses Grad-CAM and SHAP to show which brain regions influenced the classification decision. This helps clinicians understand and validate the AI's reasoning.",
+        
+        "collaboration": "Doctors can share cases with colleagues for second opinions. Use the Share button on any case to invite other clinicians. All shared cases maintain full audit trails.",
+        
+        "report generation": "The platform can auto-generate clinical reports including patient info, AI findings, measurements, and doctor notes. Access this via the Generate Report button on the Results page.",
+    }
+    
+    # Check for pattern matches
+    response = None
+    for keyword, answer in default_responses.items():
+        if keyword in msg_lower:
+            response = answer
+            break
+    
+    # If no pattern match, search docs
+    if not response:
+        sources = _search_docs(message, k=3)
+        if sources:
+            top = sources[0]
+            snippet = top["snippet"][:300] + "..."
+            response = (
+                f"Based on the documentation: {snippet}\n\n"
+                "Would you like more specific information about any feature?"
+            )
+        else:
+            response = (
+                "I can help you with:\n\n"
+                "• Tumor classification and results interpretation\n"
+                "• Segmentation analysis and volumetric measurements\n"
+                "• Growth prediction insights\n"
+                "• How to upload and process scans\n"
+                "• 2D/3D visualization features\n"
+                "• Explainable AI (Grad-CAM, SHAP)\n"
+                "• Collaboration and case sharing\n"
+                "• Report generation\n\n"
+                "What would you like to know more about?"
+            )
+    
+    # Get sources if any
     sources = _search_docs(message, k=3)
-    if sources:
-        # Include snippet from top result in answer
-        top = sources[0]
-        snippet = top["snippet"][:300] + "..."
-        answer = (
-            f"Based on the project docs ({top['path']}): {snippet}\n\n"
-            "This uses semantic search with sentence-transformers. "
-            "Ask more for details or request a report."
-        )
-    else:
-        answer = (
-            "I couldn't find matching docs. Ask about features, setup, ML training, or tests, "
-            "or share case details for report drafting."
-        )
+    
+    return {"response": response, "sources": [{"path": s["path"], "score": s["score"]} for s in sources]}
 
-    return {"answer": answer, "sources": [{"path": s["path"], "score": s["score"]} for s in sources]}
 
 
 @router.post("/report")

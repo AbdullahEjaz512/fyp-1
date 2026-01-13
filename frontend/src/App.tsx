@@ -2,7 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
-import { Navbar } from './components/common/Navbar';
+import { Sidebar } from './components/common/Sidebar';
+import { TopBar } from './components/common/TopBar';
+import { FloatingAssistant } from './components/common/FloatingAssistant';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
@@ -44,41 +46,33 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <div className="app">
-          <Navbar />
-          <main className="main-content">
+          {isAuthenticated ? (
+            <>
+              <Sidebar />
+              <div className="app-layout">
+                <TopBar />
+                <main className="main-content">
+                  <Routes>
+                    <Route path="/" element={<Navigate to="/dashboard" />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/upload" element={<UploadPage />} />
+                    <Route path="/results" element={<ResultsPage />} />
+                    <Route path="/assistant" element={<AssistantPage />} />
+                    <Route path="/visualization" element={<VisualizationPage />} />
+                    <Route path="/reconstruction" element={<Reconstruction3DPage />} />
+                    <Route path="/growth-prediction" element={<GrowthPredictionPage />} />
+                    <Route path="*" element={<Navigate to="/dashboard" />} />
+                  </Routes>
+                </main>
+                <FloatingAssistant />
+              </div>
+            </>
+          ) : (
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route
-                path="/dashboard"
-                element={isAuthenticated ? <DashboardPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/upload"
-                element={isAuthenticated ? <UploadPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/results"
-                element={isAuthenticated ? <ResultsPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/assistant"
-                element={isAuthenticated ? <AssistantPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/visualization"
-                element={isAuthenticated ? <VisualizationPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/reconstruction"
-                element={isAuthenticated ? <Reconstruction3DPage /> : <Navigate to="/" />}
-              />
-              <Route
-                path="/growth-prediction"
-                element={isAuthenticated ? <GrowthPredictionPage /> : <Navigate to="/" />}
-              />
               <Route path="*" element={<Navigate to="/" />} />
             </Routes>
-          </main>
+          )}
         </div>
       </BrowserRouter>
     </QueryClientProvider>
