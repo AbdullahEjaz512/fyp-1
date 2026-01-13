@@ -105,8 +105,14 @@ export default function GrowthPredictionPage() {
 
       setPredictionData(response.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Growth prediction failed');
-      console.error(err);
+      const errorMessage = err.response?.data?.detail || err.message || 'Growth prediction failed. Please try again.';
+      setError(errorMessage);
+      console.error('Growth prediction error:', err);
+      console.error('Error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
     } finally {
       setLoading(false);
     }
@@ -293,6 +299,26 @@ export default function GrowthPredictionPage() {
           )}
         </div>
 
+        {/* Error Display - Show prominently above action */}
+        {error && (
+          <div className="error-banner" style={{ 
+            background: '#fee', 
+            border: '2px solid #f44', 
+            padding: '1.5rem', 
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <AlertTriangle size={24} color="#f44" />
+            <div>
+              <strong>Prediction Failed:</strong>
+              <p style={{ margin: '0.5rem 0 0 0' }}>{error}</p>
+            </div>
+          </div>
+        )}
+
         {/* Predict Button */}
         <div className="action-section">
           <button
@@ -319,14 +345,6 @@ export default function GrowthPredictionPage() {
             </p>
           )}
         </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="error-banner">
-            <AlertTriangle size={20} />
-            <span>{error}</span>
-          </div>
-        )}
 
         {/* Prediction Results */}
         {predictionData && (

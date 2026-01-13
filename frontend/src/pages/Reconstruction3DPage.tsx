@@ -235,10 +235,18 @@ const Reconstruction3DPage: React.FC = () => {
     
     // Wait for container to have valid dimensions
     const container = threeContainerRef.current;
+    
+    // Force minimum dimensions if container has zero size
     if (container.clientWidth === 0 || container.clientHeight === 0) {
-      console.warn('Container has zero dimensions, retrying in 100ms...');
-      setTimeout(() => initThreeJSViewer(data), 100);
-      return;
+      console.warn('Container has zero dimensions, setting minimum size...');
+      container.style.minHeight = '600px';
+      container.style.minWidth = '100%';
+      
+      // Retry after forcing dimensions
+      if (container.clientWidth === 0) {
+        setTimeout(() => initThreeJSViewer(data), 100);
+        return;
+      }
     }
     
     try {
