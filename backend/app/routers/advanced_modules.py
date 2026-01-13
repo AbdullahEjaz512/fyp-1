@@ -41,8 +41,20 @@ def get_xai_service():
     if _xai_service is None:
         try:
             from ml_models.explainability.xai_service import ExplainabilityService
-            # Load models from main app if available
-            _xai_service = ExplainabilityService()
+            # Get models from main app if available
+            try:
+                import app.main as main_app
+                classification_model = getattr(main_app, 'classification_model', None)
+                segmentation_model = getattr(main_app, 'segmentation_model', None)
+                _xai_service = ExplainabilityService(
+                    classification_model=classification_model,
+                    segmentation_model=segmentation_model
+                )
+                logger.info(f"XAI service initialized with models: classification={classification_model is not None}, segmentation={segmentation_model is not None}")
+            except:
+                # Fallback to no models
+                _xai_service = ExplainabilityService()
+                logger.warning("XAI service initialized without models")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"XAI service unavailable: {e}")
     return _xai_service

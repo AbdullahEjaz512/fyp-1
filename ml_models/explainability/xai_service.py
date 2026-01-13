@@ -244,14 +244,22 @@ class ExplainabilityService:
         if method.lower() == "gradcam":
             # Get last convolutional layer
             try:
-                # For ResNet
-                target_layer = self.classification_model.model.layer4[-1]
-            except:
+                # For our ResNetClassifier with backbone
+                target_layer = self.classification_model.backbone.layer4[-1]
+            except AttributeError:
                 try:
-                    # Generic approach
-                    target_layer = list(self.classification_model.children())[-2]
-                except:
-                    return {'error': 'Could not find target layer for Grad-CAM'}
+                    # For ResNet directly
+                    target_layer = self.classification_model.model.layer4[-1]
+                except AttributeError:
+                    try:
+                        # For plain ResNet
+                        target_layer = self.classification_model.layer4[-1]
+                    except AttributeError:
+                        try:
+                            # Generic approach
+                            target_layer = list(self.classification_model.children())[-2]
+                        except:
+                            return {'error': 'Could not find target layer for Grad-CAM'}
             
             # Generate Grad-CAM
             grad_cam = GradCAM(self.classification_model, target_layer)
