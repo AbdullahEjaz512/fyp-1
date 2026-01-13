@@ -49,19 +49,21 @@
 
 .hero-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
-  max-width: 700px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
 .stat-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   border-radius: 1rem;
-  padding: 2rem 1.5rem;
+  padding: 1.75rem 1.25rem;
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  min-width: 180px;
 }
 
 .stat-card:hover {
@@ -94,6 +96,25 @@
 
 .features-section {
   padding: 4rem 2rem;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.section-subtitle {
+  font-size: 1.125rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .features-grid {
@@ -250,16 +271,20 @@
   }
   
   .hero-stats {
-    grid-template-columns: 1fr;
-    max-width: 300px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
   
   .stat-card {
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 1rem;
   }
   
   .stat-value {
     font-size: 1.5rem;
+  }
+  
+  .section-title {
+    font-size: 1.75rem;
   }
   
   .features-grid {
