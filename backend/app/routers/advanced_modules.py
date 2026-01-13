@@ -216,9 +216,9 @@ def explain_classification(
         return {
             "file_id": file_id,
             "method": method,
-            "target_class": analysis.tumor_type,
+            "target_class": analysis.classification_type,
             "heatmap_base64": demo_heatmap_base64,
-            "confidence": analysis.confidence,
+            "confidence": analysis.classification_confidence,
             "note": "Using demo heatmap because XAI dependencies are unavailable in production."
         }
         
@@ -275,9 +275,9 @@ def explain_classification(
                         return {
                             "file_id": file_id,
                             "method": method,
-                            "target_class": analysis.tumor_type,
+                            "target_class": analysis.classification_type,
                             "heatmap_base64": heatmap_base64,
-                            "confidence": analysis.confidence
+                            "confidence": analysis.classification_confidence
                         }
         except Exception as xai_error:
             logger.warning(f"Real XAI failed, using mock: {xai_error}")
@@ -315,9 +315,9 @@ def explain_classification(
         return {
             "file_id": file_id,
             "method": method,
-            "target_class": analysis.tumor_type,
+            "target_class": analysis.classification_type,
             "heatmap_base64": heatmap_base64,
-            "confidence": analysis.confidence,
+            "confidence": analysis.classification_confidence,
             "note": "This is a demonstration heatmap. Full XAI requires trained models in production."
         }
     
