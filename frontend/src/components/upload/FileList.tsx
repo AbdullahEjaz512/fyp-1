@@ -27,6 +27,7 @@ interface FileListProps {
 export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
   const queryClient = useQueryClient();
   const user = useAuthStore((state) => state.user);
+  const isDoctorRole = user?.role && ['doctor', 'radiologist', 'oncologist'].includes(user.role);
   const [deletingFileId, setDeletingFileId] = useState<number | null>(null);
   const [accessModalFileId, setAccessModalFileId] = useState<number | null>(null);
   const [accessModalFilename, setAccessModalFilename] = useState<string>('');
@@ -206,7 +207,7 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
               </button>
             )}
 
-            {['uploaded', 'preprocessed'].includes(file.status) && onAnalyze && (
+            {['uploaded', 'preprocessed'].includes(file.status) && onAnalyze && isDoctorRole && (
               <button
                 onClick={() => onAnalyze(file.file_id)}
                 className="btn btn-primary btn-sm"
@@ -216,7 +217,7 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
               </button>
             )}
 
-            {user?.role === 'patient' && (
+            {!isDoctorRole && (
               <button
                 onClick={() => handleGrantAccess(file.file_id, file.filename)}
                 className="btn btn-secondary btn-sm"

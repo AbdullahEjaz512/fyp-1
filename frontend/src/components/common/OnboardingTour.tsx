@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ChevronRight, ChevronLeft, CheckCircle } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 import './OnboardingTour.css';
 
 interface TourStep {
@@ -9,10 +10,10 @@ interface TourStep {
   tips?: string[];
 }
 
-const TOUR_STEPS: TourStep[] = [
+const getTourSteps = (isDoctorRole: boolean): TourStep[] => [
   {
     title: 'Welcome to Seg-Mind!',
-    description: 'Your AI-powered brain tumor analysis platform. Let\'s take a quick tour to help you get started.',
+    description: `Your AI-powered brain tumor analysis platform. Let's take a quick tour to help you get started.`,
     tips: [
       'This tour will only take 1 minute',
       'You can skip or replay it anytime',
@@ -21,11 +22,17 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'Step 1: Upload Your MRI Scan',
-    description: 'Click "Upload" in the sidebar to upload MRI scans (NIfTI format). The AI will automatically analyze them within 2-3 minutes.',
-    tips: [
+    description: isDoctorRole 
+      ? 'Click "Upload" in the sidebar to upload patient MRI scans (NIfTI format). You can then analyze them to get AI-powered insights.'
+      : 'Click "Upload" in the sidebar to upload your MRI scans (NIfTI format). Grant access to a doctor who will analyze them for you.',
+    tips: isDoctorRole ? [
       'Supported formats: .nii, .nii.gz',
-      'Upload multiple scans for the same patient',
-      'Analysis runs automatically after upload'
+      'Enter patient ID for each upload',
+      'Click "Analyze" to run AI analysis'
+    ] : [
+      'Supported formats: .nii, .nii.gz',
+      'Upload multiple scans over time',
+      'Click "Grant Access" to share with your doctor'
     ]
   },
   {
@@ -57,18 +64,28 @@ const TOUR_STEPS: TourStep[] = [
   },
   {
     title: 'You\'re All Set!',
-    description: 'Start by uploading your first MRI scan. Need help? Click the floating assistant button (bottom right) anytime.',
-    tips: [
+    description: isDoctorRole
+      ? 'Start by uploading your first patient scan. Need help? Click the floating assistant button (bottom right) anytime.'
+      : 'Start by uploading your first MRI scan. Need help? Click the floating assistant button (bottom right) anytime.',
+    tips: isDoctorRole ? [
       'Use the AI assistant for questions',
       'Generate PDF reports from results',
-      'Share cases with colleagues (doctors only)'
+      'Share cases with colleagues for second opinions'
+    ] : [
+      'Use the AI assistant for questions',
+      'Grant access to your doctor to analyze scans',
+      'View detailed results and visualizations'
     ]
   }
 ];
 
 export const OnboardingTour = () => {
+  const user = useAuthStore((state) => state.user);
+  const isDoctorRole = !!(user?.role && ['doctor', 'radiologist', 'oncologist'].includes(user.role));
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  
+  const TOUR_STEPS = getTourSteps(isDoctorRole);
 
   useEffect(() => {
     // Check if user has seen the tour

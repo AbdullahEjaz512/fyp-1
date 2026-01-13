@@ -313,7 +313,7 @@ export default function UploadPage() {
         <div className="file-history-section">
           <h2 className="section-title">Your Files</h2>
           <FileList 
-            onAnalyze={handleAnalyze}
+            onAnalyze={isDoctorRole ? handleAnalyze : undefined}
             onViewResults={handleViewResults}
           />
         </div>

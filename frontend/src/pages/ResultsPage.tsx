@@ -269,10 +269,12 @@ export default function ResultsPage() {
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          <button className="btn btn-primary" onClick={generateReport}>
-            <Download size={18} />
-            Generate Report (PDF)
-          </button>
+          {isDoctorRole && (
+            <button className="btn btn-primary" onClick={generateReport}>
+              <Download size={18} />
+              Generate Report (PDF)
+            </button>
+          )}
           
           <button 
             className="btn btn-secondary" 
