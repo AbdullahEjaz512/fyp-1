@@ -1,0 +1,10 @@
+{
+  "best_val_loss": 18.388711112737656,
+  "test_loss": 8.48741855119404,
+  "test_mae": 1.4524891109843003,
+  "num_epochs_trained": 19,
+  "num_train_samples": 1025,
+  "num_val_samples": 147,
+  "num_test_samples": 294,
+  "training_date": "2026-01-13T06:18:21.876360"
+}

@@ -406,7 +406,7 @@ def main():
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=10, verbose=True
+        optimizer, mode='min', factor=0.5, patience=10
     )
     
     # Training loop
