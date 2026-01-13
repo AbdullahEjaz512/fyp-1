@@ -1,0 +1,39 @@
+/* Info Banner Styles for Growth Prediction Page */
+.info-banner {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.info-banner svg {
+  color: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info-banner h4 {
+  margin: 0 0 0.75rem 0;
+  color: #1e40af;
+  font-size: 1.1rem;
+}
+
+.info-banner ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #475569;
+}
+
+.info-banner li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.info-banner strong {
+  color: #1e40af;
+  font-weight: 600;
+}

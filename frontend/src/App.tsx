@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore';
 import { Sidebar } from './components/common/Sidebar';
 import { TopBar } from './components/common/TopBar';
 import { FloatingAssistant } from './components/common/FloatingAssistant';
+import { OnboardingTour } from './components/common/OnboardingTour';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
@@ -65,6 +66,7 @@ function App() {
                   </Routes>
                 </main>
                 <FloatingAssistant />
+                <OnboardingTour />
               </div>
             </>
           ) : (

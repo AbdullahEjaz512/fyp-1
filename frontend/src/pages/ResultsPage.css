@@ -430,3 +430,165 @@
   color: #4a5568;
   font-size: 1.1rem;
 }
+
+/* Inline XAI Section */
+.inline-xai-section {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border: 2px solid #e2e8f0;
+}
+
+.section-header-with-help {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-header-with-help h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: #0f172a;
+}
+
+.xai-inline-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.xai-inline-image {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.xai-inline-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.xai-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.xai-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.xai-value {
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.xai-legend {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.legend-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 0.75rem;
+}
+
+.legend-gradient {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.legend-bar {
+  height: 20px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #3b82f6, #fbbf24, #ef4444);
+}
+
+.legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Quick Actions Panel */
+.quick-actions-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 2rem 0;
+  border: 2px solid #e2e8f0;
+}
+
+.quick-actions-panel h3 {
+  margin: 0 0 1.5rem 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.quick-action-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.quick-action-card svg {
+  margin-bottom: 0.5rem;
+}
+
+.quick-action-card span {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.quick-action-card p {
+  font-size: 0.875rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .xai-inline-content {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}

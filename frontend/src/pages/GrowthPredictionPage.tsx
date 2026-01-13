@@ -18,7 +18,9 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
+import { HelpTooltip } from '../components/common/HelpTooltip';
 import './GrowthPredictionPage.css';
+import '../components/common/InfoBanner.css';
 
 export default function GrowthPredictionPage() {
   const [searchParams] = useSearchParams();
@@ -132,9 +134,29 @@ export default function GrowthPredictionPage() {
           <h1>
             <TrendingUp size={32} />
             Tumor Growth Prediction
+            <HelpTooltip 
+              title="How Growth Prediction Works" 
+              content="Our LSTM (Long Short-Term Memory) AI model analyzes your historical scans to predict how the tumor will grow over time. This helps doctors plan treatment and monitor progression. Requires at least 2 scans taken at different times." 
+            />
           </h1>
-          <p>AI-powered LSTM analysis of tumor progression</p>
+          <p>AI-powered analysis of tumor progression over time</p>
         </div>
+
+        {/* Instructional Banner */}
+        {!predictionData && historicalScans.length < 2 && (
+          <div className="info-banner">
+            <Info size={24} />
+            <div>
+              <h4>How to Use Growth Prediction:</h4>
+              <ol>
+                <li>Upload at least <strong>2 MRI scans</strong> of the same patient taken at different times</li>
+                <li>Make sure both scans have been <strong>analyzed</strong> (check Results page)</li>
+                <li>Return here and click <strong>"Predict Growth"</strong></li>
+                <li>View the predicted tumor growth trajectory for the next 3-6 months</li>
+              </ol>
+            </div>
+          </div>
+        )}
 
         {/* Patient Info */}
         <div className="patient-info-card">

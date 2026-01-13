@@ -7,6 +7,7 @@ import { AnalysisResults } from '../components/analysis/AnalysisResults';
 import { DoctorAssessmentView } from '../components/analysis/DoctorAssessment';
 import { DoctorAssessmentForm } from '../components/analysis/DoctorAssessmentForm';
 import { ShareCaseModal, CollaborationPanel, DiscussionThread } from '../components/collaboration';
+import { HelpTooltip } from '../components/common/HelpTooltip';
 import { API_BASE_URL } from '../config/api';
 import { 
   FileText, 
@@ -17,7 +18,10 @@ import {
   Calendar,
   UserPlus,
   Download,
-  Lightbulb
+  Lightbulb,
+  Eye,
+  Box,
+  TrendingUp
 } from 'lucide-react';
 import './ResultsPage.css';
 
@@ -42,6 +46,13 @@ export default function ResultsPage() {
     retry: 2,
     retryDelay: 1000,
   });
+
+  // Auto-load XAI on results load
+  useEffect(() => {
+    if (resultsData && resultsData.analyses && resultsData.analyses.length > 0 && !xaiData) {
+      setTimeout(() => loadXAI(), 500);
+    }
+  }, [resultsData]);
 
   const generateReport = async () => {
     if (!resultsData || !selectedAnalysis) return;
@@ -271,12 +282,16 @@ export default function ResultsPage() {
             {xaiLoading ? (
               <>
                 <Loader2 size={18} className="spinner" />
-                Loading...
+                Loading Heatmap...
               </>
             ) : (
               <>
                 <Lightbulb size={18} />
-                Explain AI Decision
+                {xaiData ? 'Refresh' : 'Show'} AI Heatmap
+                <HelpTooltip 
+                  title="AI Explanation Heatmap" 
+                  content="This shows which brain regions the AI focused on when making its diagnosis. Red/yellow areas had the most influence on the classification." 
+                />
               </>
             )}
           </button>
@@ -357,6 +372,80 @@ export default function ResultsPage() {
 
         {/* Analysis Results */}
         <AnalysisResults analysis={selectedAnalysis} />
+
+        {/* Inline XAI Heatmap Display */}
+        {xaiData && xaiData.heatmap_base64 && (
+          <div className="inline-xai-section">
+            <div className="section-header-with-help">
+              <h2>
+                <Lightbulb size={24} />
+                AI Explanation Heatmap
+              </h2>
+              <HelpTooltip 
+                title="Understanding the Heatmap" 
+                content="Red and yellow regions show where the AI 'looked' when making its diagnosis. These are the areas that most influenced the classification decision. This helps doctors verify the AI is focusing on the right anatomical structures." 
+              />
+            </div>
+            <div className="xai-inline-content">
+              <img 
+                src={`data:image/png;base64,${xaiData.heatmap_base64}`}
+                alt="AI Explanation Heatmap"
+                className="xai-inline-image"
+              />
+              <div className="xai-inline-info">
+                <div className="xai-info-row">
+                  <span className="xai-label">Method:</span>
+                  <span className="xai-value">Grad-CAM (Gradient-weighted Class Activation Mapping)</span>
+                </div>
+                <div className="xai-info-row">
+                  <span className="xai-label">Focus Area:</span>
+                  <span className="xai-value">{xaiData.target_class || selectedAnalysis.classification.prediction.tumor_type}</span>
+                </div>
+                <div className="xai-legend">
+                  <div className="legend-title">Heat Map Legend:</div>
+                  <div className="legend-gradient">
+                    <div className="legend-bar"></div>
+                    <div className="legend-labels">
+                      <span>Low Influence</span>
+                      <span>High Influence</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions After Results */}
+        <div className="quick-actions-panel">
+          <h3>Next Steps</h3>
+          <div className="quick-actions-grid">
+            <button 
+              className="quick-action-card"
+              onClick={() => navigate(`/visualization?fileId=${fileId}`)}
+            >
+              <Eye size={32} />
+              <span>View 2D Slices</span>
+              <p>Examine scan slice-by-slice</p>
+            </button>
+            <button 
+              className="quick-action-card"
+              onClick={() => navigate(`/reconstruction?fileId=${fileId}`)}
+            >
+              <Box size={32} />
+              <span>3D Reconstruction</span>
+              <p>Interactive 3D tumor model</p>
+            </button>
+            <button 
+              className="quick-action-card"
+              onClick={() => navigate(`/growth-prediction?patientId=${resultsData.patient_id}`)}
+            >
+              <TrendingUp size={32} />
+              <span>Growth Prediction</span>
+              <p>Predict tumor progression</p>
+            </button>
+          </div>
+        </div>
 
         {/* Doctor Assessment View */}
         {selectedAnalysis.doctor_info && selectedAnalysis.doctor_assessment && (
