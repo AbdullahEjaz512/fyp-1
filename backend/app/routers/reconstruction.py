@@ -34,7 +34,7 @@ def get_reconstruction_service():
 async def generate_3d_mesh(
     file_id: int,
     smoothing: bool = True,
-    step_size: int = 2,
+    step_size: int = 1,
     user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -232,7 +232,7 @@ async def get_viewer_data(
         result = reconstructor.reconstruct_all_regions(
             str(seg_path),
             smoothing=True,
-            step_size=2
+            step_size=1
         )
         
         logger.info(f"Generated {result['num_regions']} regions")
@@ -294,7 +294,7 @@ async def get_mesh_data(
         mesh_result = await generate_3d_mesh(
             file_id=file_id,
             smoothing=True,
-            step_size=2,
+            step_size=1,
             user=user,
             db=db
         )

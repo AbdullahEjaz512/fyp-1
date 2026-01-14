@@ -142,7 +142,7 @@ class TumorReconstruction3D:
         self,
         vertices: np.ndarray,
         faces: np.ndarray,
-        iterations: int = 3
+        iterations: int = 8
     ) -> np.ndarray:
         """
         Apply Laplacian smoothing to mesh vertices
