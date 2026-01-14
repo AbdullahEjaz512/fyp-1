@@ -288,45 +288,6 @@ def explain_classification(
             "confidence": conf_val,
             "note": "Using demo heatmap because XAI dependencies are unavailable in production."
         }
-        
-        # Fallback: Generate mock heatmap
-        import base64
-        from PIL import Image, ImageDraw
-        from io import BytesIO
-        
-        # Create a 256x256 mock heatmap
-        img = Image.new('RGB', (256, 256), color='black')
-        draw = ImageDraw.Draw(img)
-        
-        # Draw a gradient circle to simulate heatmap
-        center_x, center_y = 128, 128
-        max_radius = 80
-        
-        for radius in range(max_radius, 0, -5):
-            intensity = int(255 * (1 - radius / max_radius))
-            color = (intensity, intensity // 2, 0)  # Red-yellow gradient
-            draw.ellipse(
-                [center_x - radius, center_y - radius, center_x + radius, center_y + radius],
-                fill=color
-            )
-        
-        # Add text overlay
-        draw.text((10, 10), "Demo Heatmap", fill=(255, 255, 255))
-        draw.text((10, 235), f"Method: {method.upper()}", fill=(255, 255, 255))
-        
-        # Convert to base64
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
-        
-        return {
-            "file_id": file_id,
-            "method": method,
-            "target_class": analysis.classification_type,
-            "heatmap_base64": heatmap_base64,
-            "confidence": analysis.classification_confidence,
-            "note": "This is a demonstration heatmap. Full XAI requires trained models in production."
-        }
     
     except HTTPException:
         raise
