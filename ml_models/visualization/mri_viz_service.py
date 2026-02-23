@@ -169,7 +169,8 @@ class MRIVisualizationService:
         
         # Overlay segmentation if provided
         if segmentation_slice is not None:
-            ax.imshow(segmentation_slice, cmap=self.tumor_colormap, alpha=0.5, aspect='auto')
+            extent = [0, mri_slice.shape[1], mri_slice.shape[0], 0]
+            ax.imshow(segmentation_slice, cmap=self.tumor_colormap, alpha=0.5, aspect='auto', extent=extent)
         
         ax.set_title(title, fontsize=14, fontweight='bold')
         ax.axis('off')
@@ -226,11 +227,16 @@ class MRIVisualizationService:
             ax.imshow(slice_2d, cmap='gray', aspect='auto')
             
             if segmentation is not None:
+                # If volume is 4D (C, H, W, D), we need the spatial dimensions which are the last 3
+                vol_spatial_shape = volume.shape[-3:]
+                seg_idx = int([x, y, z][axis_idx] * (segmentation.shape[axis_idx] / vol_spatial_shape[axis_idx]))
+                seg_idx = max(0, min(seg_idx, segmentation.shape[axis_idx] - 1))
                 seg_slice = self.extract_slice(segmentation, 
-                                              [x, y, z][axis_idx], 
+                                              seg_idx, 
                                               axis=axis_idx, 
                                               normalize=False)
-                ax.imshow(seg_slice, cmap=self.tumor_colormap, alpha=0.5, aspect='auto')
+                extent = [0, slice_2d.shape[1], slice_2d.shape[0], 0]
+                ax.imshow(seg_slice, cmap=self.tumor_colormap, alpha=0.5, aspect='auto', extent=extent)
             
             ax.set_title(title, fontsize=14, fontweight='bold')
             ax.axis('off')

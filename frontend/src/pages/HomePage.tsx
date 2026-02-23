@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { LoginForm } from '../components/auth/LoginForm';
 import { RegisterForm } from '../components/auth/RegisterForm';
+import { Footer } from '../components/common/Footer';
 import { Brain, CheckCircle, Clock, Shield, Zap } from 'lucide-react';
 import './HomePage.css';
 
@@ -24,7 +25,7 @@ export default function HomePage() {
             <Brain size={64} className="hero-icon" />
             <h1 className="hero-title">Welcome back, {user.full_name || user.username}!</h1>
             <p className="hero-subtitle">
-              {user.role === 'patient' 
+              {user.role === 'patient'
                 ? 'Manage your MRI scans and view analysis results'
                 : 'Access your doctor dashboard and patient cases'}
             </p>
@@ -84,10 +85,10 @@ export default function HomePage() {
             Advanced Medical Imaging Platform powered by Deep Learning
           </p>
           <div className="hero-buttons">
-            <button className="btn btn-primary btn-lg" onClick={() => setShowLogin(true)}>
+            <button className="btn btn-lg special-login-btn" onClick={() => setShowLogin(true)}>
               Login
             </button>
-            <button className="btn btn-secondary btn-lg" onClick={() => setShowRegister(true)}>
+            <button className="btn btn-lg special-signup-btn" onClick={() => setShowRegister(true)}>
               Sign Up
             </button>
           </div>
@@ -161,7 +162,7 @@ export default function HomePage() {
         <div className="modal-overlay" onClick={() => setShowLogin(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowLogin(false)}>×</button>
-            <LoginForm 
+            <LoginForm
               onSuccess={handleAuthSuccess}
               onSwitchToRegister={() => {
                 setShowLogin(false);
@@ -176,7 +177,7 @@ export default function HomePage() {
         <div className="modal-overlay" onClick={() => setShowRegister(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setShowRegister(false)}>×</button>
-            <RegisterForm 
+            <RegisterForm
               onSuccess={handleAuthSuccess}
               onSwitchToLogin={() => {
                 setShowRegister(false);
@@ -186,6 +187,8 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

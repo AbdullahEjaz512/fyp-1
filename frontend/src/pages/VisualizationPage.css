@@ -1,19 +1,115 @@
-.visualization-page { padding: 20px; max-width: 1400px; margin: 0 auto; }
-.viz-header { margin-bottom: 24px; }
-.viz-header h2 { margin: 0 0 8px 0; }
-.viz-controls { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px; flex-wrap: wrap; }
-.control-group { display: flex; align-items: center; gap: 8px; }
-.control-group label { font-weight: 500; }
-.control-group select, .control-group input[type="range"] { padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; }
-.control-group input[type="range"] { width: 200px; }
-.viz-controls button { padding: 8px 16px; background: #0ea5e9; color: white; border: none; border-radius: 6px; cursor: pointer; }
-.viz-controls button:disabled { opacity: 0.6; cursor: not-allowed; }
-.viz-content { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; min-height: 400px; display: flex; align-items: center; justify-content: center; }
-.viz-image { max-width: 100%; height: auto; }
-.loader { text-align: center; color: #64748b; }
-.viz-metrics { margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px; }
-.viz-metrics h3 { margin: 0 0 16px 0; }
-.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-.metric-card { background: white; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; }
-.metric-card h4 { margin: 0 0 8px 0; color: #0ea5e9; }
-.metric-card p { margin: 4px 0; color: #475569; font-size: 14px; }
+.visualization-page {
+    padding: 80px 20px 20px 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.viz-header {
+    margin-bottom: 24px;
+}
+
+.viz-header h2 {
+    margin: 0 0 8px 0;
+}
+
+.viz-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-group label {
+    font-weight: 500;
+}
+
+.control-group select,
+.control-group input[type="range"] {
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+}
+
+.control-group input[type="range"] {
+    width: 200px;
+}
+
+.viz-controls button {
+    padding: 8px 16px;
+    background: #0ea5e9;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.viz-controls button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.viz-content {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.viz-image {
+    max-width: 100%;
+    height: auto;
+}
+
+.loader {
+    text-align: center;
+    color: #64748b;
+}
+
+.viz-metrics {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.viz-metrics h3 {
+    margin: 0 0 16px 0;
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.metric-card {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.metric-card h4 {
+    margin: 0 0 8px 0;
+    color: #0ea5e9;
+}
+
+.metric-card p {
+    margin: 4px 0;
+    color: #475569;
+    font-size: 14px;
+}

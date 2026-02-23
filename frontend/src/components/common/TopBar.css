@@ -57,7 +57,7 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -123,7 +123,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -148,7 +148,7 @@
 
 .dropdown-role {
   font-size: 0.75rem;
-  color: #667eea;
+  color: #3b82f6;
   font-weight: 500;
   text-transform: capitalize;
 }

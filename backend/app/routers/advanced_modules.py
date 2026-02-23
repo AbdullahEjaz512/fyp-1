@@ -376,7 +376,10 @@ def visualize_slice(
         
         seg_slice = None
         if include_seg and segmentation is not None:
-            seg_slice = service.extract_slice(segmentation, slice_idx, axis, normalize=False)
+            vol_spatial_shape = volume.shape[-3:]
+            seg_idx = int(slice_idx * (segmentation.shape[axis] / vol_spatial_shape[axis]))
+            seg_idx = max(0, min(seg_idx, segmentation.shape[axis] - 1))
+            seg_slice = service.extract_slice(segmentation, seg_idx, axis, normalize=False)
             logger.info(f"Extracted segmentation slice shape: {seg_slice.shape}")
         
         logger.info("Creating visualization...")

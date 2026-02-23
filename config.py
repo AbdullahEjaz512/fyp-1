@@ -207,7 +207,7 @@ CACHE_PREPROCESSED_DATA = True
 
 # Only print config on main process (not worker processes)
 if __name__ != "__mp_main__":
-    print(f"✓ Configuration loaded successfully")
+    print(f"[SUCCESS] Configuration loaded successfully")
     print(f"  - Device: {DEVICE}")
     print(f"  - BraTS Dataset: {BRATS_DATASET_PATH}")
     print(f"  - Debug Mode: {DEBUG_MODE}")

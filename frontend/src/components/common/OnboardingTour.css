@@ -67,7 +67,7 @@
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   transition: width 0.3s ease;
   border-radius: 16px 0 0 0;
 }
@@ -79,7 +79,7 @@
 .step-indicator {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #667eea;
+  color: #3b82f6;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 1rem;
@@ -101,7 +101,7 @@
 
 .step-tips {
   background: #f8fafc;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #3b82f6;
   padding: 1.25rem;
   border-radius: 8px;
   margin-top: 1.5rem;
@@ -167,7 +167,7 @@
 }
 
 .dot.active {
-  background: #667eea;
+  background: #3b82f6;
   width: 24px;
   border-radius: 4px;
 }
@@ -192,14 +192,14 @@
 }
 
 .btn-outline:hover {
-  border-color: #667eea;
-  color: #667eea;
+  border-color: #3b82f6;
+  color: #3b82f6;
   background: #f8fafc;
 }
 
 .btn-primary {
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -225,7 +225,7 @@
   left: 30px;
   background: white;
   border: 2px solid #e2e8f0;
-  color: #667eea;
+  color: #3b82f6;
   padding: 0.75rem 1.25rem;
   border-radius: 8px;
   font-weight: 600;
@@ -239,7 +239,7 @@
 }
 
 .replay-tour-btn:hover {
-  border-color: #667eea;
+  border-color: #3b82f6;
   background: #f8fafc;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);

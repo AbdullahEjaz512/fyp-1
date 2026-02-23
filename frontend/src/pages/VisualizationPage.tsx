@@ -10,85 +10,109 @@ export default function VisualizationPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const fileId = searchParams.get('fileId') || localStorage.getItem('lastFileId');
-  
+
   // Query for file list when no file is selected
   const { data: files } = useQuery({
     queryKey: ['files'],
     queryFn: fileService.listFiles,
     enabled: !fileId,
   });
-  
+
   const [view, setView] = useState<'slice' | 'multiview' | 'montage' | '3d'>('multiview');
   const [sliceIdx, setSliceIdx] = useState(64);
   const [axis, setAxis] = useState(2);
-  const [includeSegmentation, setIncludeSegmentation] = useState(true);
+  const [includeSegmentation, setIncludeSegmentation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imageData, setImageData] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadVisualization = async () => {
-    if (!fileId) return;
-    
-    setLoading(true);
-    try {
-      let response;
-      
-      switch (view) {
-        case 'slice':
+  useEffect(() => {
+    let isActive = true;
+
+    const loadData = async () => {
+      if (!fileId) return;
+
+      setLoading(true);
+      setErrorMsg(null);
+      setImageData(null);
+
+      if (view !== 'slice') setMetrics(null);
+
+      try {
+        let response;
+        if (view === 'slice') {
           response = await advancedService.visualizeSlice({
             file_id: parseInt(fileId),
             slice_idx: sliceIdx,
             axis,
             include_segmentation: includeSegmentation
           });
-          break;
-        
-        case 'multiview':
+        } else if (view === 'multiview') {
           response = await advancedService.visualizeMultiView({
             file_id: parseInt(fileId),
             include_segmentation: includeSegmentation
           });
-          break;
-        
-        case 'montage':
+        } else if (view === 'montage') {
           response = await advancedService.visualizeMontage({
             file_id: parseInt(fileId),
             num_slices: 12,
             axis
           });
-          break;
-        
-        case '3d':
+        } else if (view === '3d') {
           response = await advancedService.visualize3DProjection({
             file_id: parseInt(fileId),
             method: 'mip'
           });
-          break;
+        }
+
+        if (isActive && response?.data?.image_base64) {
+          setImageData(response.data.image_base64);
+        } else if (isActive) {
+          setErrorMsg("No image data returned from server.");
+        }
+      } catch (err: any) {
+        if (isActive) {
+          console.error('Visualization error:', err);
+          setErrorMsg(err.response?.data?.detail || "Failed to load visualization");
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
       }
-      
-      setImageData(response.data.image_base64);
-    } catch (err) {
-      console.error('Visualization error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const loadMetrics = async () => {
-    if (!fileId) return;
-    
-    try {
-      const response = await advancedService.getVolumeMetrics(parseInt(fileId));
-      setMetrics(response.data.metrics);
-    } catch (err) {
-      console.error('Metrics error:', err);
-    }
-  };
+    const loadMetrics = async () => {
+      if (!fileId) return;
+      try {
+        const response = await advancedService.getVolumeMetrics(parseInt(fileId));
+        if (isActive) setMetrics(response.data.metrics);
+      } catch (err) {
+        if (isActive) console.error('Metrics error:', err);
+      }
+    };
 
-  useEffect(() => {
-    loadVisualization();
-    loadMetrics();
+    loadData();
+    // Only load metrics if we are including segmentation overlay (often provides volume metrics)
+    if (includeSegmentation) {
+      loadMetrics();
+    }
+
+    return () => {
+      isActive = false;
+    };
   }, [fileId, view, sliceIdx, axis, includeSegmentation]);
+
+  // For the manual refresh button
+  const handleManualRefresh = () => {
+    // A trick to trigger the useEffect again is to force a state update, or just copy the fetch logic.
+    // Toggling state temporarily works, or we can just extract the function.
+    // For simplicity, we'll just toggle loading to true and let user rely on UI interactions.
+    // Actually, setting view to itself won't trigger. 
+    // We'll just reset segmentation to current to trigger if needed, or better, we just let it be since it's auto-updating.
+    window.location.reload();
+  };
 
   if (!fileId) {
     const analyzedFiles = files?.filter(f => f.status === 'analyzed') || [];
@@ -102,7 +126,7 @@ export default function VisualizationPage() {
             </h1>
             <p style={{ color: '#64748b' }}>Select a file to view 2D slices</p>
           </div>
-          
+
           {analyzedFiles.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem' }}>
               <p>No analyzed files found. Please upload and analyze a scan first.</p>
@@ -214,13 +238,18 @@ export default function VisualizationPage() {
           </label>
         </div>
 
-        <button onClick={loadVisualization} disabled={loading}>
+        <button onClick={handleManualRefresh} disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
 
       <div className="viz-content">
         {loading && <div className="loader">Loading visualization...</div>}
+        {errorMsg && !loading && (
+          <div className="error-message" style={{ color: '#ef4444', textAlign: 'center' }}>
+            <p>Error: {errorMsg}</p>
+          </div>
+        )}
         {imageData && !loading && (
           <img
             src={`data:image/png;base64,${imageData}`}
