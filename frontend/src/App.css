@@ -36,10 +36,11 @@ body {
   display: flex;
   flex-direction: column;
   margin-left: 260px;
-  transition: margin-left 0.3s ease;
+  transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
 }
 
-.app-layout.sidebar-collapsed {
+.sidebar-collapsed {
   margin-left: 70px;
 }
 
@@ -189,16 +190,17 @@ button {
 }
 
 @media (max-width: 768px) {
+
   .grid-cols-2,
   .grid-cols-3,
   .grid-cols-4 {
     grid-template-columns: 1fr;
   }
-  
+
   .container {
     padding: 1rem;
   }
-  
+
   .section-title {
     font-size: 2rem;
   }
@@ -250,11 +252,11 @@ button {
   .app-layout {
     margin-left: 0 !important;
   }
-  
+
   .main-content {
     padding: 1rem;
   }
-  
+
   .container {
     padding: 1rem;
   }

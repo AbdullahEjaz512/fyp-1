@@ -5,7 +5,7 @@
 }
 
 .hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
   color: white;
   padding: 3rem 1.25rem;
   text-align: center;
@@ -116,7 +116,8 @@ body {
   align-items: center;
   gap: 1.25rem;
 }
-  padding: 4rem 2rem;
+
+padding: 4rem 2rem;
 }
 
 .section-header {
@@ -230,6 +231,7 @@ body {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -249,6 +251,7 @@ body {
     transform: translateY(20px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -282,32 +285,32 @@ body {
   .hero-title {
     font-size: 2rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1rem;
   }
-  
+
   .hero-buttons {
     flex-direction: column;
   }
-  
+
   .hero-stats {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
   }
-  
+
   .stat-card {
     padding: 1.25rem 1rem;
   }
-  
+
   .stat-value {
     font-size: 1.5rem;
   }
-  
+
   .section-title {
     font-size: 1.75rem;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
     gap: 1rem;

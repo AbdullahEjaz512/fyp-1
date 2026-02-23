@@ -4,13 +4,14 @@
   left: 260px;
   right: 0;
   height: 70px;
-  background: white;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid #e2e8f0;
   z-index: 999;
-  transition: left 0.3s ease;
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.sidebar.collapsed ~ .topbar {
+.sidebar-collapsed .topbar {
   left: 70px;
 }
 
@@ -104,6 +105,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -190,15 +192,15 @@
   .topbar {
     left: 70px;
   }
-  
+
   .topbar-container {
     padding: 0 1rem;
   }
-  
+
   .user-info-compact {
     display: none;
   }
-  
+
   .dropdown-menu {
     min-width: 240px;
   }

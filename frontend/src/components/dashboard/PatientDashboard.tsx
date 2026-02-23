@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { fileService } from '../../services/file.service';
-import { 
-  FileText, 
-  Calendar, 
-  Activity, 
+import {
+  FileText,
+  Calendar,
+  Activity,
   TrendingUp,
   CheckCircle,
   Clock,
@@ -85,11 +85,11 @@ export const PatientDashboard = () => {
           </div>
           <div className="stat-content">
             <div className="stat-value">{pendingFiles}</div>
-            <div className="stat-label">Pending</div>
+            <div className="stat-label">Analysis in Progress</div>
           </div>
           <div className="stat-trend">
             <Clock size={16} />
-            Awaiting analysis
+            Awaiting results
           </div>
         </div>
       </div>
@@ -98,9 +98,9 @@ export const PatientDashboard = () => {
       <div className="recent-files-section">
         <div className="section-header">
           <Activity size={24} />
-          <h3>Recent Uploads</h3>
+          <h3>My Scans</h3>
         </div>
-        
+
         {recentFiles.length > 0 ? (
           <div className="recent-files-list">
             {recentFiles.map((file) => (

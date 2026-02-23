@@ -14,6 +14,7 @@ import AssistantPage from './pages/AssistantPage';
 import VisualizationPage from './pages/VisualizationPage';
 import Reconstruction3DPage from './pages/Reconstruction3DPage';
 import GrowthPredictionPage from './pages/GrowthPredictionPage';
+import { useUIStore } from './store/uiStore';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -29,6 +30,10 @@ function App() {
   const initialize = useAuthStore((state) => state.initialize);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading);
+  const isSidebarCollapsed = useUIStore((state) => state.isSidebarCollapsed);
+  const user = useAuthStore((state) => state.user);
+
+  const isDoctorRole = user?.role && ['doctor', 'radiologist', 'oncologist'].includes(user.role);
 
   useEffect(() => {
     initialize();
@@ -50,7 +55,7 @@ function App() {
           {isAuthenticated ? (
             <>
               <Sidebar />
-              <div className="app-layout">
+              <div className={`app-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
                 <TopBar />
                 <main className="main-content">
                   <Routes>
@@ -58,10 +63,21 @@ function App() {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/upload" element={<UploadPage />} />
                     <Route path="/results" element={<ResultsPage />} />
-                    <Route path="/assistant" element={<AssistantPage />} />
-                    <Route path="/visualization" element={<VisualizationPage />} />
-                    <Route path="/reconstruction" element={<Reconstruction3DPage />} />
-                    <Route path="/growth-prediction" element={<GrowthPredictionPage />} />
+
+                    {/* Doctor Only Routes */}
+                    <Route path="/assistant" element={
+                      isDoctorRole ? <AssistantPage /> : <Navigate to="/dashboard" />
+                    } />
+                    <Route path="/visualization" element={
+                      isDoctorRole ? <VisualizationPage /> : <Navigate to="/dashboard" />
+                    } />
+                    <Route path="/reconstruction" element={
+                      isDoctorRole ? <Reconstruction3DPage /> : <Navigate to="/dashboard" />
+                    } />
+                    <Route path="/growth-prediction" element={
+                      isDoctorRole ? <GrowthPredictionPage /> : <Navigate to="/dashboard" />
+                    } />
+
                     <Route path="*" element={<Navigate to="/dashboard" />} />
                   </Routes>
                 </main>

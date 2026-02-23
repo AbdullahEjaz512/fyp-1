@@ -1,35 +1,42 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
-import { 
-  Home, 
-  LayoutDashboard, 
-  Upload, 
-  FileText, 
-  Eye, 
-  Box, 
+import {
+  Home,
+  LayoutDashboard,
+  Upload,
+  FileText,
+  Eye,
+  Box,
   TrendingUp,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { useState } from 'react';
+import { useUIStore } from '../../store/uiStore';
 import './Sidebar.css';
 
 export const Sidebar = () => {
   const location = useLocation();
   const { user } = useAuthStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const { isSidebarCollapsed: collapsed, toggleSidebar } = useUIStore();
 
   const isDoctorRole = user?.role && ['doctor', 'radiologist', 'oncologist'].includes(user.role);
 
-  const navItems = [
-    { path: '/', icon: Home, label: 'Home' },
-    ...(isDoctorRole ? [{ path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' }] : []),
-    { path: '/upload', icon: Upload, label: 'Upload' },
+  const doctorNavItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/upload', icon: Upload, label: 'Upload New Scan' },
     { path: '/results', icon: FileText, label: 'Results' },
     { path: '/visualization', icon: Eye, label: '2D Visualization' },
     { path: '/reconstruction', icon: Box, label: '3D Reconstruction' },
     { path: '/growth-prediction', icon: TrendingUp, label: 'Growth Prediction' },
   ];
+
+  const patientNavItems = [
+    { path: '/dashboard', icon: Home, label: 'Home' },
+    { path: '/upload', icon: Upload, label: 'Upload Scan' },
+    { path: '/results', icon: FileText, label: 'My Results' },
+  ];
+
+  const navItems = isDoctorRole ? doctorNavItems : patientNavItems;
 
   const isActive = (path: string) => {
     if (path === '/') {
@@ -51,10 +58,10 @@ export const Sidebar = () => {
           </div>
         )}
         {collapsed && <div className="brand-icon-only">🧠</div>}
-        
-        <button 
-          className="collapse-btn" 
-          onClick={() => setCollapsed(!collapsed)}
+
+        <button
+          className="collapse-btn"
+          onClick={toggleSidebar}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -91,7 +98,7 @@ export const Sidebar = () => {
           </div>
         </div>
       )}
-      
+
       {user && collapsed && (
         <div className="sidebar-footer">
           <div className="user-avatar-only">
