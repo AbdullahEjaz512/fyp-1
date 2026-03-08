@@ -528,6 +528,24 @@
 }
 
 /* Quick Actions Panel */
+.no-assessment-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.no-assessment-notice svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
 .quick-actions-panel {
   background: white;
   border-radius: 12px;

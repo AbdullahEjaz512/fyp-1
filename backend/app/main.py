@@ -1601,8 +1601,15 @@ async def download_mri_file(
     has_access = False
     
     if user_role == 'patient':
-        # Patient can download their own files
-        has_access = (file_record.user_id == user_id)
+        # Patient can download files they uploaded themselves OR files uploaded on their
+        # behalf by a doctor (matched via patient_id == medical_record_number)
+        if file_record.user_id == user_id:
+            has_access = True
+        else:
+            db_user = db.query(User).filter(User.user_id == user_id).first()
+            if db_user and db_user.medical_record_number and \
+               file_record.patient_id == db_user.medical_record_number:
+                has_access = True
     elif user_role in ['doctor', 'radiologist', 'oncologist']:
         # Doctor must have been granted access
         permission = db.query(FileAccessPermission).filter(
@@ -1616,22 +1623,51 @@ async def download_mri_file(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: You don't have permission to download this file"
         )
-    
-    # Check if file exists on disk
-    file_path = file_record.file_path
-    if not os.path.exists(file_path):
+
+    import pathlib
+
+    def _resolve(stored: str) -> str | None:
+        """Try multiple base directories to locate a file stored with a relative path."""
+        if not stored:
+            return None
+        p = pathlib.Path(stored)
+        if p.is_absolute():
+            return str(p) if p.exists() else None
+        # 1) CWD (where uvicorn is launched from, typically the backend folder)
+        for base in [
+            pathlib.Path.cwd(),                          # e.g. .../fyp/backend
+            pathlib.Path(__file__).parent.parent,        # same when running tests
+            pathlib.Path(__file__).parent.parent.parent, # project root .../fyp
+        ]:
+            candidate = base / stored
+            if candidate.exists():
+                return str(candidate)
+        return None
+
+    # Try original file first, then fall back to preprocessed version
+    file_path = _resolve(file_record.file_path)
+    download_filename = file_record.filename
+
+    if not file_path and file_record.preprocessed_path:
+        file_path = _resolve(file_record.preprocessed_path)
+        if file_path:
+            # Serve the preprocessed NIfTI with an appropriate name
+            stem = pathlib.Path(file_record.filename).stem
+            download_filename = f"{stem}_processed.nii.gz"
+
+    if not file_path:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="File not found on server"
+            detail="The original scan file is no longer available on the server. Please ask your doctor to re-upload the scan."
         )
-    
+
     # Return file for download
     return FileResponse(
         path=file_path,
-        filename=file_record.filename,
+        filename=download_filename,
         media_type='application/octet-stream',
         headers={
-            "Content-Disposition": f'attachment; filename="{file_record.filename}"'
+            "Content-Disposition": f'attachment; filename="{download_filename}"'
         }
     )
 

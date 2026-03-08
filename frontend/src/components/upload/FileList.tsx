@@ -29,6 +29,7 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
   const user = useAuthStore((state) => state.user);
   const isDoctorRole = user?.role && ['doctor', 'radiologist', 'oncologist'].includes(user.role);
   const [deletingFileId, setDeletingFileId] = useState<number | null>(null);
+  const [downloadingFileId, setDownloadingFileId] = useState<number | null>(null);
   const [accessModalFileId, setAccessModalFileId] = useState<number | null>(null);
   const [accessModalFilename, setAccessModalFilename] = useState<string>('');
 
@@ -55,23 +56,6 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
     },
   });
 
-  const downloadMutation = useMutation({
-    mutationFn: fileService.downloadFile,
-    onSuccess: (blob, fileId) => {
-      const file = files?.find(f => f.file_id === fileId);
-      if (file) {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    },
-  });
-
   const handleDelete = async (fileId: number) => {
     if (window.confirm('Are you sure you want to delete this file?')) {
       setDeletingFileId(fileId);
@@ -84,8 +68,48 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
     }
   };
 
-  const handleDownload = (fileId: number) => {
-    downloadMutation.mutate(fileId);
+  const handleDownload = async (fileId: number, filename: string, isAnalyzed: boolean) => {
+    setDownloadingFileId(fileId);
+    try {
+      const token = localStorage.getItem('authToken');
+      let blob: Blob;
+      let downloadName: string;
+
+      if (isAnalyzed) {
+        // Download the clinical report PDF
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/v1/assistant/report/pdf/${fileId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({ detail: response.statusText }));
+          throw new Error(err.detail || 'Failed to generate report');
+        }
+        blob = await response.blob();
+        downloadName = `report_${filename.replace(/\.[^.]+$/, '')}.pdf`;
+      } else {
+        // Fall back to raw MRI file download
+        blob = await fileService.downloadFile(fileId);
+        downloadName = filename;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = downloadName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 150);
+    } catch (error: any) {
+      console.error('Download failed:', error);
+      const detail = error?.response?.data?.detail || error?.message || 'Unknown error';
+      alert(`Download failed: ${detail}`);
+    } finally {
+      setDownloadingFileId(null);
+    }
   };
 
   const handleGrantAccess = (fileId: number, filename: string) => {
@@ -228,16 +252,17 @@ export const FileList = ({ onAnalyze, onViewResults }: FileListProps) => {
             )}
 
             <button
-              onClick={() => handleDownload(file.file_id)}
+              onClick={() => handleDownload(file.file_id, file.filename, file.status === 'analyzed')}
               className="btn btn-secondary btn-sm"
-              disabled={downloadMutation.isPending}
+              disabled={downloadingFileId === file.file_id}
+              title={file.status === 'analyzed' ? 'Download clinical report PDF' : 'Download MRI file'}
             >
-              {downloadMutation.isPending ? (
+              {downloadingFileId === file.file_id ? (
                 <Loader2 size={16} className="spinner" />
               ) : (
                 <Download size={16} />
               )}
-              Download
+              {file.status === 'analyzed' ? 'Download Report' : 'Download'}
             </button>
 
             <button

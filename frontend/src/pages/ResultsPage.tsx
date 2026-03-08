@@ -21,7 +21,8 @@ import {
   Lightbulb,
   Eye,
   Box,
-  TrendingUp
+  TrendingUp,
+  Stethoscope
 } from 'lucide-react';
 import './ResultsPage.css';
 
@@ -47,12 +48,37 @@ export default function ResultsPage() {
     retryDelay: 1000,
   });
 
-  // Auto-load XAI on results load
+  // Auto-load XAI on results load (doctors only)
   useEffect(() => {
-    if (resultsData && resultsData.analyses && resultsData.analyses.length > 0 && !xaiData) {
+    if (isDoctorRole && resultsData && resultsData.analyses && resultsData.analyses.length > 0 && !xaiData) {
       setTimeout(() => loadXAI(), 500);
     }
-  }, [resultsData]);
+  }, [resultsData, isDoctorRole]);
+
+  const downloadReportForFile = async () => {
+    if (!fileId) return;
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${API_BASE_URL}/api/v1/assistant/report/pdf/${fileId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: response.statusText }));
+        throw new Error(err.detail || 'Failed to generate report');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report_${resultsData?.patient_id || fileId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { window.URL.revokeObjectURL(url); document.body.removeChild(a); }, 150);
+    } catch (err: any) {
+      console.error('Report download failed:', err);
+      alert(`Failed to download report: ${err.message}`);
+    }
+  };
 
   const generateReport = async () => {
     if (!resultsData || !selectedAnalysis) return;
@@ -276,34 +302,41 @@ export default function ResultsPage() {
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          {isDoctorRole && (
+          {isDoctorRole ? (
             <button className="btn btn-primary" onClick={generateReport}>
               <Download size={18} />
               Generate Report (PDF)
             </button>
+          ) : (
+            <button className="btn btn-primary" onClick={downloadReportForFile}>
+              <Download size={18} />
+              Download Report (PDF)
+            </button>
           )}
           
-          <button 
-            className="btn btn-secondary" 
-            onClick={loadXAI}
-            disabled={xaiLoading}
-          >
-            {xaiLoading ? (
-              <>
-                <Loader2 size={18} className="spinner" />
-                Loading Heatmap...
-              </>
-            ) : (
-              <>
-                <Lightbulb size={18} />
-                {xaiData ? 'Refresh' : 'Show'} AI Heatmap
-                <HelpTooltip 
-                  title="AI Explanation Heatmap" 
-                  content="This shows which brain regions the AI focused on when making its diagnosis. Red/yellow areas had the most influence on the classification." 
-                />
-              </>
-            )}
-          </button>
+          {isDoctorRole && (
+            <button 
+              className="btn btn-secondary" 
+              onClick={loadXAI}
+              disabled={xaiLoading}
+            >
+              {xaiLoading ? (
+                <>
+                  <Loader2 size={18} className="spinner" />
+                  Loading Heatmap...
+                </>
+              ) : (
+                <>
+                  <Lightbulb size={18} />
+                  {xaiData ? 'Refresh' : 'Show'} AI Heatmap
+                  <HelpTooltip 
+                    title="AI Explanation Heatmap" 
+                    content="This shows which brain regions the AI focused on when making its diagnosis. Red/yellow areas had the most influence on the classification." 
+                  />
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Share Case Modal */}
@@ -315,7 +348,7 @@ export default function ResultsPage() {
         )}
         
         {/* XAI Visualization Modal */}
-        {showXAI && xaiData && (
+        {isDoctorRole && showXAI && xaiData && (
           <div className="xai-modal" onClick={() => setShowXAI(false)}>
             <div className="xai-modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="xai-header">
@@ -382,8 +415,23 @@ export default function ResultsPage() {
         {/* Analysis Results */}
         <AnalysisResults analysis={selectedAnalysis} />
 
+        {/* Doctor Assessment — shown to ALL users (patients need to see diagnosis/prescription) */}
+        {selectedAnalysis.doctor_info && selectedAnalysis.doctor_assessment && (
+          <DoctorAssessmentView
+            doctorInfo={selectedAnalysis.doctor_info}
+            assessment={selectedAnalysis.doctor_assessment}
+          />
+        )}
+        {/* Show a prompt to patients when no assessment yet */}
+        {!isDoctorRole && (!selectedAnalysis.doctor_info || !selectedAnalysis.doctor_assessment) && (
+          <div className="no-assessment-notice">
+            <Stethoscope size={24} />
+            <p>Your doctor's assessment and prescription will appear here once they have reviewed your scan.</p>
+          </div>
+        )}
+
         {/* Inline XAI Heatmap Display */}
-        {xaiData && xaiData.heatmap_base64 && (
+        {isDoctorRole && xaiData && xaiData.heatmap_base64 && (
           <div className="inline-xai-section">
             <div className="section-header-with-help">
               <h2>
@@ -455,14 +503,6 @@ export default function ResultsPage() {
             </button>
           </div>
         </div>
-
-        {/* Doctor Assessment View */}
-        {selectedAnalysis.doctor_info && selectedAnalysis.doctor_assessment && (
-          <DoctorAssessmentView
-            doctorInfo={selectedAnalysis.doctor_info}
-            assessment={selectedAnalysis.doctor_assessment}
-          />
-        )}
 
         {/* Doctor Assessment Form (for doctors to add/edit assessment) */}
         {isDoctorRole && (

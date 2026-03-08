@@ -4,7 +4,7 @@ from typing import List, Optional
 from pathlib import Path
 import os
 
-from app.database import get_db, AnalysisResult, File as DBFile
+from app.database import get_db, AnalysisResult, File as DBFile, User
 from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["assistant"])
@@ -399,3 +399,214 @@ def generate_pdf_report(
     pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
     
     return {"pdf_base64": pdf_b64}
+
+
+@router.get("/report/pdf/{file_id}")
+def generate_report_for_file(
+    file_id: int,
+    user = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Auto-generate a PDF clinical report for a given file_id.
+    Fetches analysis, classification, segmentation and doctor assessment from DB.
+    Accessible by the patient who owns the file OR any doctor/radiologist/oncologist.
+    Returns a streaming PDF so the browser downloads it directly.
+    """
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.units import inch
+    from fastapi.responses import StreamingResponse
+    from datetime import datetime
+    from io import BytesIO
+    import base64
+
+    # ---- access control ----
+    user_id = int(user.get("user_id"))
+    user_role = user.get("role")
+
+    file_record = db.query(DBFile).filter(DBFile.file_id == file_id).first()
+    if not file_record:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if user_role == "patient":
+        # patient must own the file or be identified by patient_id
+        db_user = db.query(User).filter(User.user_id == user_id).first()
+        patient_mrn = db_user.medical_record_number if db_user else None
+        if file_record.user_id != user_id and file_record.patient_id != patient_mrn:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    # ---- gather data from DB ----
+    analysis = (
+        db.query(AnalysisResult)
+        .filter(AnalysisResult.file_id == file_id)
+        .order_by(AnalysisResult.analysis_date.desc())
+        .first()
+    )
+
+    patient_id = file_record.patient_id or "Unknown"
+    filename = file_record.filename or ""
+
+    # Build classification/segmentation/notes from analysis record
+    predicted_type = "N/A"
+    confidence_val = "N/A"
+    volume_val = "N/A"
+    dice_val = "N/A"
+    doctor_name = "N/A"
+    clinical_notes = "No additional notes"
+    diagnosis_text = ""
+    prescription_text = ""
+    treatment_text = ""
+    followup_text = ""
+    next_appt = ""
+
+    if analysis:
+        predicted_type = analysis.classification_type or "N/A"
+        confidence_val = f"{analysis.classification_confidence:.1f}%" if analysis.classification_confidence else "N/A"
+        if analysis.tumor_volume:
+            volume_val = f"{analysis.tumor_volume:.2f} mm³"
+        seg_data = analysis.segmentation_data or {}
+        dice_raw = seg_data.get("metrics", {}).get("dice_score") if isinstance(seg_data, dict) else None
+        if dice_raw is not None:
+            dice_val = f"{dice_raw:.3f}"
+
+        # Doctor info / assessment
+        if analysis.assessed_by:
+            doc_user = db.query(User).filter(User.user_id == analysis.assessed_by).first()
+            if doc_user:
+                doctor_name = doc_user.full_name or f"Doctor #{analysis.assessed_by}"
+
+        asmt = analysis.doctor_assessment if hasattr(analysis, "doctor_assessment") else None
+        if not asmt and analysis.notes:
+            # notes column may carry assessment JSON
+            import json
+            try:
+                asmt = json.loads(analysis.notes) if isinstance(analysis.notes, str) else analysis.notes
+            except Exception:
+                asmt = None
+
+        if isinstance(asmt, dict):
+            diagnosis_text = asmt.get("diagnosis") or asmt.get("clinical_diagnosis") or ""
+            prescription_text = asmt.get("prescription") or ""
+            treatment_text = asmt.get("treatment_plan") or ""
+            followup_text = asmt.get("follow_up_notes") or ""
+            next_appt = asmt.get("next_appointment") or ""
+            clinical_notes = asmt.get("interpretation") or asmt.get("doctor_interpretation") or "No additional notes"
+
+    # ---- build PDF ----
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
+    story = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle(
+        "CustomTitle", parent=styles["Heading1"],
+        fontSize=18, textColor=colors.HexColor("#003366"), spaceAfter=12,
+    )
+    h2 = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=10)
+    body = styles["BodyText"]
+
+    story.append(Paragraph("Seg-Mind Clinical Report", title_style))
+    story.append(Spacer(1, 0.15*inch))
+
+    # Patient info
+    info_data = [
+        ["Patient ID:", patient_id],
+        ["File:", filename],
+        ["Report Date:", datetime.utcnow().strftime("%Y-%m-%d")],
+        ["Assessing Clinician:", doctor_name],
+    ]
+    t = Table(info_data, colWidths=[2*inch, 4*inch])
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.25*inch))
+
+    # AI Classification
+    story.append(Paragraph("<b>AI Classification Results</b>", h2))
+    cls_data = [
+        ["Predicted Type:", predicted_type],
+        ["Confidence:", confidence_val],
+    ]
+    ct = Table(cls_data, colWidths=[2*inch, 4*inch])
+    ct.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(ct)
+    story.append(Spacer(1, 0.2*inch))
+
+    # Segmentation
+    story.append(Paragraph("<b>Segmentation Metrics</b>", h2))
+    seg_tbl = [
+        ["Tumor Volume:", volume_val],
+        ["Dice Score:", dice_val],
+    ]
+    st = Table(seg_tbl, colWidths=[2*inch, 4*inch])
+    st.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(st)
+    story.append(Spacer(1, 0.2*inch))
+
+    # Clinical Assessment (doctor fields)
+    story.append(Paragraph("<b>Clinical Assessment</b>", h2))
+    if diagnosis_text:
+        story.append(Paragraph(f"<b>Diagnosis:</b> {diagnosis_text}", body))
+        story.append(Spacer(1, 0.1*inch))
+    if clinical_notes and clinical_notes != "No additional notes":
+        story.append(Paragraph("<b>Clinical Interpretation:</b>", body))
+        story.append(Paragraph(clinical_notes, body))
+        story.append(Spacer(1, 0.1*inch))
+    elif not diagnosis_text:
+        story.append(Paragraph("No clinical assessment recorded yet.", body))
+        story.append(Spacer(1, 0.1*inch))
+    if prescription_text:
+        story.append(Paragraph("<b>Prescription:</b>", body))
+        story.append(Paragraph(prescription_text, body))
+        story.append(Spacer(1, 0.1*inch))
+    if treatment_text:
+        story.append(Paragraph("<b>Treatment Plan:</b>", body))
+        story.append(Paragraph(treatment_text, body))
+        story.append(Spacer(1, 0.1*inch))
+    if followup_text:
+        story.append(Paragraph("<b>Follow-up Notes:</b>", body))
+        story.append(Paragraph(followup_text, body))
+        story.append(Spacer(1, 0.1*inch))
+    if next_appt:
+        story.append(Paragraph(f"<b>Next Appointment:</b> {next_appt}", body))
+        story.append(Spacer(1, 0.1*inch))
+
+    story.append(Spacer(1, 0.2*inch))
+
+    # Disclaimer
+    disc_style = ParagraphStyle(
+        "Disclaimer", parent=body,
+        fontSize=8, textColor=colors.grey,
+        borderColor=colors.grey, borderWidth=1, borderPadding=8,
+    )
+    story.append(Paragraph(
+        "<b>Disclaimer:</b> This report leverages AI-generated insights and is intended to "
+        "support clinical decision-making. It does not substitute for professional "
+        "medical judgment. Findings should be verified by a qualified clinician.",
+        disc_style,
+    ))
+
+    doc.build(story)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    safe_patient = (patient_id or "report").replace(" ", "_")
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="report_{safe_patient}.pdf"'},
+    )
