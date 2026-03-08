@@ -200,6 +200,9 @@ def generate_report(
     segmentation = body.get("segmentation") or {}
     notes = body.get("notes") or ""
 
+    # Accept both frontend (`tumor_type`) and legacy (`type`) classification keys.
+    predicted_type = classification.get("type") or classification.get("tumor_type") or "N/A"
+
     tmpl = Template(
         (
             "Patient ID: {{ patient_id }}\n"
@@ -207,7 +210,7 @@ def generate_report(
             "Date: {{ date }}\n\n"
             "Clinical Summary:\n{{ summary }}\n\n"
             "AI Classification:\n"
-            "- Predicted Type: {{ classification.type or 'N/A' }}\n"
+            "- Predicted Type: {{ predicted_type }}\n"
             "- Confidence: {{ classification.confidence or 'N/A' }}\n\n"
             "Segmentation Metrics:\n"
             "- Tumor Volume (approx): {{ segmentation.volume or 'N/A' }}\n"
@@ -225,6 +228,7 @@ def generate_report(
         doctor_name=doctor_name,
         summary=summary,
         classification=classification,
+        predicted_type=predicted_type,
         segmentation=segmentation,
         notes=notes,
         date=datetime.utcnow().strftime("%Y-%m-%d"),
@@ -292,6 +296,9 @@ def generate_pdf_report(
     segmentation = body.get("segmentation") or {}
     notes = body.get("notes") or ""
 
+    # Accept both frontend (`tumor_type`) and legacy (`type`) classification keys.
+    predicted_type = classification.get("type") or classification.get("tumor_type") or "N/A"
+
     # Create PDF in memory
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -334,7 +341,7 @@ def generate_pdf_report(
     # AI Classification
     story.append(Paragraph("<b>AI Classification Results:</b>", styles['Heading2']))
     class_data = [
-        ["Predicted Type:", classification.get("type", "N/A")],
+        ["Predicted Type:", predicted_type],
         ["Confidence:", str(classification.get("confidence", "N/A"))],
     ]
     ct = Table(class_data, colWidths=[2*inch, 4*inch])
