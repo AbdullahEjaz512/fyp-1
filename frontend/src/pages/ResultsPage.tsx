@@ -473,36 +473,38 @@ export default function ResultsPage() {
           </div>
         )}
 
-        {/* Quick Actions After Results */}
-        <div className="quick-actions-panel">
-          <h3>Next Steps</h3>
-          <div className="quick-actions-grid">
-            <button 
-              className="quick-action-card"
-              onClick={() => navigate(`/visualization?fileId=${fileId}`)}
-            >
-              <Eye size={32} />
-              <span>View 2D Slices</span>
-              <p>Examine scan slice-by-slice</p>
-            </button>
-            <button 
-              className="quick-action-card"
-              onClick={() => navigate(`/reconstruction?fileId=${fileId}`)}
-            >
-              <Box size={32} />
-              <span>3D Reconstruction</span>
-              <p>Interactive 3D tumor model</p>
-            </button>
-            <button 
-              className="quick-action-card"
-              onClick={() => navigate(`/growth-prediction?patientId=${resultsData.patient_id}`)}
-            >
-              <TrendingUp size={32} />
-              <span>Growth Prediction</span>
-              <p>Predict tumor progression</p>
-            </button>
+        {/* Quick Actions After Results — doctors only */}
+        {isDoctorRole && (
+          <div className="quick-actions-panel">
+            <h3>Next Steps</h3>
+            <div className="quick-actions-grid">
+              <button 
+                className="quick-action-card"
+                onClick={() => navigate(`/visualization?fileId=${fileId}`)}
+              >
+                <Eye size={32} />
+                <span>View 2D Slices</span>
+                <p>Examine scan slice-by-slice</p>
+              </button>
+              <button 
+                className="quick-action-card"
+                onClick={() => navigate(`/reconstruction?fileId=${fileId}`)}
+              >
+                <Box size={32} />
+                <span>3D Reconstruction</span>
+                <p>Interactive 3D tumor model</p>
+              </button>
+              <button 
+                className="quick-action-card"
+                onClick={() => navigate(`/growth-prediction?patientId=${resultsData.patient_id}`)}
+              >
+                <TrendingUp size={32} />
+                <span>Growth Prediction</span>
+                <p>Predict tumor progression</p>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Doctor Assessment Form (for doctors to add/edit assessment) */}
         {isDoctorRole && (
