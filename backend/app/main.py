@@ -2028,10 +2028,10 @@ async def analyze_complete(
                     seg_output = prediction
                 
                 # Convert to numpy if still a tensor
-                if hasattr(seg_output, 'cpu'):
+                if isinstance(seg_output, torch.Tensor):
+                    seg_output = seg_output.detach().cpu().numpy()
+                elif hasattr(seg_output, 'cpu'):
                     seg_output = seg_output.cpu().numpy()
-                elif isinstance(seg_output, torch.Tensor):
-                    seg_output = seg_output.numpy()
                 
                 # Ensure output is float32 for NIfTI
                 seg_output = seg_output.astype(np.float32)
@@ -2158,15 +2158,21 @@ async def analyze_complete(
                 # Run classification with ensemble if available
                 classification_uncertainty = None
                 if use_ensemble and ensemble_classification:
-                    logger.info("Using ensemble classification")
                     ensemble_result = ensemble_classify_with_confidence(
                         ensemble_classification,
                         input_batch,
                         device=str(device)
                     )
+                    
+                    if isinstance(ensemble_result['probabilities'], dict):
+                        # Convert dict probabilities to tensor for consistency
+                        probs_list = list(ensemble_result['probabilities'].values())
+                        probabilities = torch.tensor([probs_list]).to(device)
+                    else:
+                        probabilities = torch.from_numpy(ensemble_result['probabilities']).to(device)
+                    
                     predicted_class = torch.tensor([ensemble_result['prediction_class']])
                     confidence = torch.tensor([ensemble_result['confidence']])
-                    probabilities = torch.tensor([list(ensemble_result['probabilities'].values())]).to(device)
                     classification_uncertainty = {
                         'epistemic_uncertainty': ensemble_result['epistemic_uncertainty'],
                         'quality_flags': ensemble_result['quality_flags']

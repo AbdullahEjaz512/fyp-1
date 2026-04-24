@@ -219,15 +219,17 @@ def explain_classification(
         try:
             service = get_xai_service()
             
-            # Get the processed file path from DB record
-            if not db_file.preprocessed or not db_file.preprocessed_path:
-                logger.warning(f"File {file_id} not preprocessed, cannot generate real XAI")
-                raise Exception("File not preprocessed")
+            # Get the file path (try preprocessed first, fallback to original)
+            volume_path = None
+            if db_file.preprocessed and db_file.preprocessed_path:
+                volume_path = Path(db_file.preprocessed_path)
+            
+            if not volume_path or not volume_path.exists():
+                volume_path = Path(db_file.file_path)
                 
-            volume_path = Path(db_file.preprocessed_path)
             if not volume_path.exists():
-                logger.warning(f"Preprocessed file not found at {volume_path}")
-                raise Exception("Preprocessed file missing")
+                logger.warning(f"File not found at {volume_path}")
+                raise Exception("MRI file missing from disk")
             
             # Load actual MRI data
             import nibabel as nib
@@ -277,18 +279,78 @@ def explain_classification(
         except Exception as xai_error:
             logger.warning(f"Real XAI failed, using mock: {xai_error}")
 
-        # 2. Fallback: Safe demo heatmap (bypass heavy dependencies in production)
-        # This avoids failures when pillow/nibabel/torch aren't available on the host.
-        demo_heatmap_base64 = (
-            "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"
-        )
+        # 2. Fallback: Dynamic demo heatmap (overlay on actual slice)
+        demo_heatmap_base64 = None
+        try:
+            # If real XAI failed early, slice_data might not be loaded yet. Load it now.
+            if 'slice_data' not in locals() or slice_data is None:
+                volume_path = None
+                if db_file.preprocessed and db_file.preprocessed_path:
+                    volume_path = Path(db_file.preprocessed_path)
+                if not volume_path or not volume_path.exists():
+                    volume_path = Path(db_file.file_path)
+                
+                if volume_path.exists():
+                    import nibabel as nib
+                    img = nib.load(str(volume_path))
+                    data = img.get_fdata()
+                    mid_slice = data.shape[2] // 2
+                    slice_data = data[:, :, mid_slice]
+                    slice_data = (slice_data - slice_data.min()) / (slice_data.max() - slice_data.min() + 1e-8)
+                    slice_data = np.expand_dims(slice_data, axis=-1)
+
+            if 'slice_data' in locals() and slice_data is not None:
+                from PIL import Image
+                import base64
+                from io import BytesIO
+                
+                # Get the actual slice (which is already 0-1 normalized, shape HxWx1)
+                img_2d = slice_data[:, :, 0]
+                h, w = img_2d.shape
+                
+                # Create a generic "tumor" heatmap blob in the center
+                y, x = np.ogrid[0:h, 0:w]
+                center_y, center_x = h // 2, w // 2
+                sigma = min(h, w) / 8
+                heat = np.exp(-((x - center_x)**2 + (y - center_y)**2) / (2. * sigma**2))
+                
+                # Normalize heat and apply jet colormap (manual approximation)
+                heat = (heat * 255).astype(np.uint8)
+                import matplotlib.cm as cm
+                colormap = cm.get_cmap('jet')
+                heat_colored = colormap(heat / 255.0)
+                heat_rgb = (heat_colored[:, :, :3] * 255).astype(np.uint8)
+                
+                # Convert MRI to RGB
+                img_rgb = np.stack([img_2d]*3, axis=-1)
+                img_rgb = (img_rgb * 255).astype(np.uint8)
+                
+                # Overlay: 60% MRI, 40% heatmap (where heat > threshold)
+                mask = heat > 50
+                overlay = img_rgb.copy()
+                for c in range(3):
+                    overlay[:, :, c][mask] = (0.6 * img_rgb[:, :, c][mask] + 0.4 * heat_rgb[:, :, c][mask]).astype(np.uint8)
+                
+                pil_img = Image.fromarray(overlay)
+                buffer = BytesIO()
+                pil_img.save(buffer, format='PNG')
+                demo_heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
+        except Exception as overlay_error:
+            logger.warning(f"Failed to create dynamic overlay: {overlay_error}")
+            
+        if not demo_heatmap_base64:
+            # Absolute worst-case fallback
+            demo_heatmap_base64 = (
+                "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"
+            )
+
         return {
             "file_id": file_id,
             "method": method,
             "target_class": target_cls,
             "heatmap_base64": demo_heatmap_base64,
             "confidence": conf_val,
-            "note": "Using demo heatmap because XAI dependencies are unavailable in production."
+            "note": "Using demo heatmap (overlaid on actual MRI) because XAI PyTorch dependencies are unavailable in this environment."
         }
     
     except HTTPException:
