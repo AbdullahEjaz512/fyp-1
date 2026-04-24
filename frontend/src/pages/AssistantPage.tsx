@@ -20,7 +20,7 @@ export default function AssistantPage() {
     setLoading(true);
     try {
       const res = await assistantService.chat(content);
-      const answer = res?.data?.answer ?? 'No response';
+      const answer = res?.data?.response ?? res?.data?.answer ?? 'No response';
       setMessages((prev) => [...prev, { role: 'assistant', text: answer }]);
     } catch (err) {
       setMessages((prev) => [

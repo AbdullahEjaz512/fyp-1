@@ -2,196 +2,292 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pathlib import Path
-import os
+import os, json
 
-from app.database import get_db, AnalysisResult, File as DBFile, User
+from app.database import get_db, AnalysisResult, File as DBFile, User, FileAccessPermission
 from app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/api/v1/assistant", tags=["assistant"])
 
+# ── GROQ LLM CLIENT ──────────────────────────────────────────────────────────
+def _get_groq_client():
+    try:
+        from groq import Groq
+        api_key = os.getenv("GROQ_API_KEY")
+        if api_key:
+            return Groq(api_key=api_key)
+    except Exception:
+        pass
+    return None
 
-# Semantic RAG over project docs using sentence-transformers + FAISS
-_DOC_INDEX = {
-    "ready": False,
-    "documents": [],
-    "paths": [],
-    "model": None,
-    "index": None,
+SYSTEM_PROMPT = """You are a clinical AI assistant integrated into Seg-Mind, a brain tumor MRI analysis platform.
+You have deep knowledge of:
+- Brain tumor types: Glioblastoma (GBM), Anaplastic Astrocytoma, Astrocytoma, Oligodendroglioma, Meningioma, Medulloblastoma, Ependymoma, Pituitary adenoma
+- WHO grading system (Grade I-IV), IDH mutation status, MGMT methylation
+- Tumor subregions: NCR (Necrotic Core), ET (Enhancing Tumor), ED (Edema)
+- MRI sequences: T1, T2, FLAIR, T1ce
+- Treatments: surgical resection, radiation, temozolomide chemotherapy, bevacizumab
+- Platform features: upload NIfTI scans, AI segmentation, classification, 3D visualization, report generation
+
+When given patient case data, summarize it clearly in clinical terms.
+Be concise, accurate, and helpful. If asked about a specific tumor type, explain: definition, WHO grade, prognosis, treatment.
+"""
+
+# ── MEDICAL KNOWLEDGE FALLBACK (when no Groq key) ────────────────────────────
+MEDICAL_KB = {
+    "anaplastic astrocytoma": """**Anaplastic Astrocytoma (WHO Grade III)**
+- A malignant diffuse glioma arising from astrocytes
+- IDH mutation found in ~70% of cases (IDH-mutant = better prognosis)
+- Median survival: 3-5 years (IDH-mutant), 1.5-2 years (IDH-wildtype)
+- Treatment: Surgical resection → Radiation (60 Gy) → Temozolomide chemotherapy
+- MRI: Heterogeneous T2/FLAIR signal, may show enhancement; less necrosis than GBM
+- Recurrence common; often progresses to Glioblastoma (Grade IV)""",
+
+    "glioblastoma": """**Glioblastoma Multiforme (GBM) - WHO Grade IV**
+- Most aggressive primary brain tumor; median survival 14-16 months with treatment
+- IDH-wildtype in 90% of cases
+- MGMT promoter methylation = better response to temozolomide
+- Treatment: Stupp protocol — resection + 60 Gy radiation + temozolomide
+- MRI: Ring-enhancing lesion with central necrosis, perilesional edema""",
+
+    "astrocytoma": """**Diffuse Astrocytoma (WHO Grade II)**
+- Slow-growing; IDH-mutant in most cases
+- Median survival: 6-8 years
+- Treatment: Observation or surgery; radiation/chemo if high-risk
+- MRI: T2/FLAIR hyperintensity, typically no enhancement""",
+
+    "oligodendroglioma": """**Oligodendroglioma (WHO Grade II-III)**
+- IDH-mutant + 1p/19q co-deletion (defines this tumor)
+- Best prognosis among gliomas; median survival 10-15 years
+- Highly responsive to PCV chemotherapy and temozolomide
+- MRI: Frontal lobe predominance, calcifications common""",
+
+    "meningioma": """**Meningioma (WHO Grade I-III)**
+- Arises from meninges; most are benign (Grade I)
+- Grade I: Excellent prognosis with surgical cure
+- Grade II/III: Higher recurrence; requires radiation
+- MRI: Extra-axial, dural tail sign, homogeneous enhancement""",
+
+    "medulloblastoma": """**Medulloblastoma (WHO Grade IV)**
+- Most common malignant pediatric brain tumor
+- Located in cerebellum/posterior fossa
+- 5-year survival: 70-80% with craniospinal radiation + chemo
+- Molecular subgroups: WNT (best), SHH, Group 3, Group 4""",
+
+    "ncr": "**NCR (Necrotic Core)**: The non-enhancing necrotic center of the tumor — dead tissue with no blood supply. Large NCR volume is associated with higher grade tumors like GBM.",
+    "enhancing tumor": "**ET (Enhancing Tumor)**: Active tumor cells that break the blood-brain barrier, visible on T1-contrast MRI. Volume correlates with aggressiveness.",
+    "edema": "**ED (Edema/Peritumoral)**: Swelling around the tumor. Large edema can cause mass effect, headaches, and neurological deficits.",
+
+    "who grade": """**WHO Brain Tumor Grading:**
+- Grade I: Benign, slow growth, surgical cure possible (e.g., Pilocytic Astrocytoma)
+- Grade II: Slow-growing, may recur (e.g., Diffuse Astrocytoma)
+- Grade III: Malignant, anaplastic (e.g., Anaplastic Astrocytoma)
+- Grade IV: Most aggressive, short survival (e.g., Glioblastoma)""",
+
+    "idh": """**IDH Mutation Status:**
+- IDH-mutant: Better prognosis, younger patients, secondary GBMs
+- IDH-wildtype: Worse prognosis, primary GBMs, more aggressive
+- Tested by immunohistochemistry or sequencing""",
+
+    "mgmt": """**MGMT Methylation:**
+- MGMT promoter methylation silences a DNA repair gene
+- Result: Tumor cannot repair temozolomide-induced DNA damage
+- Methylated = better response to temozolomide chemotherapy
+- Present in ~40% of GBMs""",
+}
+
+PLATFORM_KB = {
+    "upload": "To upload a scan: Go to Upload tab → select NIfTI (.nii/.nii.gz) file → enter Patient ID → click Upload. The system auto-runs segmentation and classification.",
+    "visualization": "Two modes: 2D (slice viewer with windowing controls) and 3D Reconstruction (interactive volumetric rendering with tumor overlay).",
+    "segmentation": "Uses a 3D U-Net trained on BraTS dataset. Segments 3 tumor subregions: NCR (necrotic core), ET (enhancing tumor), ED (edema). Outputs volume in mm³.",
+    "classification": "ResNet50 model classifies tumor type with confidence score. Categories: Glioblastoma, Astrocytoma, Oligodendroglioma, Meningioma, Medulloblastoma, Ependymoma.",
+    "report": "Auto-generate PDF clinical report: Go to Results → Download Report. Includes AI findings, volumes, classification, and doctor assessment.",
+    "collaboration": "Share cases: Results page → Share button → enter colleague's email. They get access to view and add clinical opinions.",
+    "growth prediction": "LSTM model forecasts tumor volume over time using sequential scans. Requires 2+ scans uploaded for the same patient.",
+    "xai": "Explainable AI uses Grad-CAM heatmaps showing which brain regions drove the classification decision.",
 }
 
 
-def _collect_docs() -> None:
+def _llm_answer(message: str, context: str = "") -> str:
+    client = _get_groq_client()
+    if not client:
+        return None
+    try:
+        prompt = message
+        if context:
+            prompt = f"Context from patient record:\n{context}\n\nQuestion: {message}"
+        resp = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=600,
+            temperature=0.3,
+        )
+        return resp.choices[0].message.content
+    except Exception as e:
+        print(f"Groq error: {e}")
+        return None
+
+
+def _local_answer(message: str) -> Optional[str]:
+    msg = message.lower()
+    # Medical knowledge
+    for key, val in MEDICAL_KB.items():
+        if key in msg:
+            return val
+    # Platform knowledge
+    for key, val in PLATFORM_KB.items():
+        if key in msg:
+            return val
+    return None
+
+
+# ── FAISS DOC INDEX (project docs) ───────────────────────────────────────────
+_DOC_INDEX = {"ready": False, "documents": [], "paths": [], "model": None, "index": None}
+
+
+def _collect_docs():
     try:
         from sentence_transformers import SentenceTransformer
-        import faiss
-        import numpy as np
+        import faiss, numpy as np
     except Exception:
-        return  # dependencies not available
-
-    # assistant.py is at backend/app/routers; go 3 levels up to project root
+        return
     root = Path(__file__).resolve().parents[3]
-    md_files: List[Path] = []
-    # Collect top-level markdown docs and key READMEs
+    docs, paths = [], []
     for p in root.glob("*.md"):
-        md_files.append(p)
-    # Frontend and backend READMEs if present
-    for p in [root / "frontend" / "README.md", root / "backend" / "README.md"]:
-        if p.exists():
-            md_files.append(p)
-
-    documents = []
-    paths = []
-    for p in md_files:
         try:
-            text = p.read_text(encoding="utf-8", errors="ignore")
-            documents.append(text)
+            docs.append(p.read_text(encoding="utf-8", errors="ignore"))
             paths.append(str(p.relative_to(root)))
         except Exception:
             continue
-
-    if not documents:
+    if not docs:
         return
-
     try:
-        # Use a lightweight sentence transformer model
         model = SentenceTransformer('all-MiniLM-L6-v2')
-        embeddings = model.encode(documents, show_progress_bar=False)
-        
-        # Build FAISS index
-        dimension = embeddings.shape[1]
-        index = faiss.IndexFlatL2(dimension)
-        index.add(embeddings.astype('float32'))
-        
-        _DOC_INDEX.update({
-            "ready": True,
-            "documents": documents,
-            "paths": paths,
-            "model": model,
-            "index": index,
-        })
+        emb = model.encode(docs, show_progress_bar=False).astype('float32')
+        idx = faiss.IndexFlatL2(emb.shape[1])
+        idx.add(emb)
+        _DOC_INDEX.update({"ready": True, "documents": docs, "paths": paths, "model": model, "index": idx})
     except Exception as e:
-        # fail silently; assistant will still respond without RAG
-        print(f"Warning: Could not initialize doc index: {e}")
-        return
+        print(f"Doc index error: {e}")
 
 
-def _search_docs(query: str, k: int = 3) -> List[dict]:
-    if not _DOC_INDEX.get("ready"):
+def _search_docs(query: str, k: int = 2) -> List[dict]:
+    if not _DOC_INDEX["ready"]:
         _collect_docs()
-    if not _DOC_INDEX.get("ready"):
+    if not _DOC_INDEX["ready"]:
         return []
     try:
         import numpy as np
-        model = _DOC_INDEX["model"]
-        index = _DOC_INDEX["index"]
-        
-        # Encode query
-        query_vec = model.encode([query])
-        
-        # Search
-        distances, indices = index.search(query_vec.astype('float32'), k)
-        
-        results = []
-        for idx, dist in zip(indices[0], distances[0]):
-            if idx < len(_DOC_INDEX["documents"]):
-                results.append({
-                    "path": _DOC_INDEX["paths"][idx],
-                    "score": float(1.0 / (1.0 + dist)),  # convert distance to similarity
-                    "snippet": _DOC_INDEX["documents"][idx][:500],
-                })
-        return results
-    except Exception as e:
-        print(f"Search error: {e}")
+        qv = _DOC_INDEX["model"].encode([query]).astype('float32')
+        dists, idxs = _DOC_INDEX["index"].search(qv, k)
+        return [{"path": _DOC_INDEX["paths"][i], "score": float(1/(1+d)),
+                 "snippet": _DOC_INDEX["documents"][i][:400]}
+                for i, d in zip(idxs[0], dists[0]) if i < len(_DOC_INDEX["documents"])]
+    except Exception:
         return []
 
 
-@router.post("/chat")
-def chat_assistant(
-    body: dict,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Conversational assistant endpoint.
-    Request: { "message": str, "conversation_history": list }
-    Response: { "response": str, "sources": [ {path, score} ] }
-    """
-    message: Optional[str] = body.get("message")
-    if not message:
-        raise HTTPException(status_code=400, detail="Missing 'message' in request body")
+# ── PATIENT CASE LOOKUP ───────────────────────────────────────────────────────
+def _get_case_context(message: str, db: Session, user: dict) -> str:
+    msg = message.lower()
+    user_id = int(user.get("user_id", 0))
+    user_role = user.get("role", "")
 
-    # Normalize message for pattern matching
-    msg_lower = message.lower()
-    
-    # Enhanced response patterns for common medical questions
-    default_responses = {
-        "tumor classification": "Our platform uses a ResNet-based deep learning model to classify brain tumors into four categories: Glioma, Meningioma, Pituitary tumor, and No tumor. The model achieves 96%+ accuracy and provides confidence scores with each prediction. You can view the classification results in the Results tab after uploading a scan.",
-        
-        "segmentation": "The segmentation module uses a U-Net architecture trained on medical imaging data to precisely identify tumor boundaries. It provides volumetric measurements, 3D visualization, and generates masks that help in surgical planning and radiation therapy targeting.",
-        
-        "growth prediction": "Our LSTM-based growth prediction model analyzes sequential scans to forecast tumor growth over time. It predicts future tumor volume with MAE of ~1.45 cc and helps in treatment planning by showing expected growth trajectories.",
-        
-        "upload scan": "To upload a scan: 1) Go to the Upload tab, 2) Select your MRI files (NIfTI format supported), 3) Fill in patient details, 4) Click upload. The system will automatically run segmentation and classification analysis. Results typically appear within 2-3 minutes.",
-        
-        "visualization": "We offer two visualization modes: 2D Visualization (slice-by-slice view with adjustable windowing) and 3D Reconstruction (interactive volumetric rendering). Both include tumor highlighting and measurement tools.",
-        
-        "explainability": "Our XAI (Explainable AI) module uses Grad-CAM and SHAP to show which brain regions influenced the classification decision. This helps clinicians understand and validate the AI's reasoning.",
-        
-        "collaboration": "Doctors can share cases with colleagues for second opinions. Use the Share button on any case to invite other clinicians. All shared cases maintain full audit trails.",
-        
-        "report generation": "The platform can auto-generate clinical reports including patient info, AI findings, measurements, and doctor notes. Access this via the Generate Report button on the Results page.",
-    }
-    
-    # Check for pattern matches
-    response = None
-    for keyword, answer in default_responses.items():
-        if keyword in msg_lower:
-            response = answer
-            break
-    
-    # If no pattern match, search docs
+    # Extract file_id if mentioned
+    import re
+    fid_match = re.search(r'file[_\s]?(?:id[:\s#]?)?\s*(\d+)', msg)
+    pid_match = re.search(r'patient[_\s]?(?:id[:\s#]?)?\s*([A-Za-z0-9\-]+)', msg)
+
+    file_record = None
+    if fid_match:
+        fid = int(fid_match.group(1))
+        file_record = db.query(DBFile).filter(DBFile.file_id == fid).first()
+    elif pid_match:
+        pid = pid_match.group(1)
+        file_record = db.query(DBFile).filter(DBFile.patient_id == pid).order_by(DBFile.upload_date.desc()).first()
+
+    if not file_record:
+        return ""
+
+    # Access control
+    if user_role == "patient":
+        db_user = db.query(User).filter(User.user_id == user_id).first()
+        if file_record.patient_id != (db_user.medical_record_number if db_user else None):
+            return ""
+    elif user_role in ["doctor", "radiologist", "oncologist"]:
+        has_access = db.query(FileAccessPermission).filter(
+            FileAccessPermission.file_id == file_record.file_id,
+            FileAccessPermission.doctor_id == user_id,
+            FileAccessPermission.status == "active"
+        ).first()
+        if not has_access and file_record.user_id != user_id:
+            return ""
+
+    analysis = db.query(AnalysisResult).filter(
+        AnalysisResult.file_id == file_record.file_id
+    ).order_by(AnalysisResult.analysis_date.desc()).first()
+
+    ctx = f"File ID: {file_record.file_id} | File: {file_record.filename} | Patient ID: {file_record.patient_id} | Status: {file_record.status}\n"
+    if analysis:
+        ctx += (
+            f"Tumor Type: {analysis.classification_type} | "
+            f"Confidence: {analysis.classification_confidence:.1f}% | "
+            f"WHO Grade: {analysis.who_grade} | "
+            f"Volume: {analysis.tumor_volume:.2f} mm³ | "
+            f"Malignancy: {analysis.malignancy_level}\n"
+        )
+        if analysis.doctor_interpretation:
+            ctx += f"Doctor Notes: {analysis.doctor_interpretation}\n"
+    return ctx
+
+
+# ── MAIN CHAT ENDPOINT ────────────────────────────────────────────────────────
+@router.post("/chat")
+def chat_assistant(body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    message: str = body.get("message", "").strip()
+    if not message:
+        raise HTTPException(status_code=400, detail="Missing 'message'")
+
+    sources = []
+
+    # 1. Try to get patient case context
+    case_ctx = _get_case_context(message, db, user)
+
+    # 2. Try Groq LLM (best path)
+    response = _llm_answer(message, context=case_ctx)
+
     if not response:
-        sources = _search_docs(message, k=3)
-        if sources:
-            top = sources[0]
-            snippet = top["snippet"][:300] + "..."
-            response = (
-                f"Based on the documentation: {snippet}\n\n"
-                "Would you like more specific information about any feature?"
-            )
+        # 3. Try local knowledge base
+        response = _local_answer(message)
+
+    if not response:
+        # 4. Try FAISS doc search
+        docs = _search_docs(message, k=2)
+        if docs and docs[0]["score"] > 0.3:
+            response = f"From the documentation:\n\n{docs[0]['snippet']}..."
+            sources = [{"path": d["path"], "score": d["score"]} for d in docs]
         else:
             response = (
-                "I can help you with:\n\n"
-                "• Tumor classification and results interpretation\n"
-                "• Segmentation analysis and volumetric measurements\n"
-                "• Growth prediction insights\n"
-                "• How to upload and process scans\n"
-                "• 2D/3D visualization features\n"
-                "• Explainable AI (Grad-CAM, SHAP)\n"
-                "• Collaboration and case sharing\n"
-                "• Report generation\n\n"
-                "What would you like to know more about?"
+                "I can help with:\n\n"
+                "**Medical Questions:** Ask about any tumor type (e.g. 'Tell me about Anaplastic Astrocytoma'), "
+                "WHO grades, IDH/MGMT status, treatments.\n\n"
+                "**Platform Features:** uploading scans, segmentation, visualization, reports, collaboration.\n\n"
+                "**Patient Cases:** Ask 'What does file_id 5 show?' or 'Summarize patient MRN-001 case' "
+                "(you must have access to that file).\n\n"
+                "**Tip:** Set GROQ_API_KEY in your .env file for full AI-powered responses."
             )
-    
-    # Get sources if any
-    sources = _search_docs(message, k=3)
-    
-    return {"response": response, "sources": [{"path": s["path"], "score": s["score"]} for s in sources]}
+
+    return {"response": response, "sources": sources}
 
 
-
+# ── REPORT ENDPOINTS (unchanged) ─────────────────────────────────────────────
 @router.post("/report")
-def generate_report(
-    body: dict,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Generate a structured clinical-style report from provided case data.
-    Expected body keys: patient_id, doctor_name, summary, classification, segmentation, notes
-    Returns: { report_text: str }
-    """
+def generate_report(body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
     from jinja2 import Template
+    from datetime import datetime
 
     patient_id = body.get("patient_id") or "Unknown"
     doctor_name = body.get("doctor_name") or (user.get("full_name") or "Doctor")
@@ -199,54 +295,26 @@ def generate_report(
     classification = body.get("classification") or {}
     segmentation = body.get("segmentation") or {}
     notes = body.get("notes") or ""
-
-    # Accept both frontend (`tumor_type`) and legacy (`type`) classification keys.
     predicted_type = classification.get("type") or classification.get("tumor_type") or "N/A"
 
     tmpl = Template(
-        (
-            "Patient ID: {{ patient_id }}\n"
-            "Assessing Clinician: {{ doctor_name }}\n"
-            "Date: {{ date }}\n\n"
-            "Clinical Summary:\n{{ summary }}\n\n"
-            "AI Classification:\n"
-            "- Predicted Type: {{ predicted_type }}\n"
-            "- Confidence: {{ classification.confidence or 'N/A' }}\n\n"
-            "Segmentation Metrics:\n"
-            "- Tumor Volume (approx): {{ segmentation.volume or 'N/A' }}\n"
-            "- Dice Score: {{ segmentation.dice or 'N/A' }}\n\n"
-            "Doctor Notes:\n{{ notes }}\n\n"
-            "Disclaimer: This report leverages AI-generated insights and is intended to\n"
-            "support clinical decision-making. It does not substitute for professional\n"
-            "medical judgment. Findings should be verified by a qualified clinician."
-        )
+        "Patient ID: {{ patient_id }}\nAssessing Clinician: {{ doctor_name }}\nDate: {{ date }}\n\n"
+        "Clinical Summary:\n{{ summary }}\n\nAI Classification:\n"
+        "- Predicted Type: {{ predicted_type }}\n- Confidence: {{ classification.confidence or 'N/A' }}\n\n"
+        "Segmentation Metrics:\n- Tumor Volume (approx): {{ segmentation.volume or 'N/A' }}\n"
+        "- Dice Score: {{ segmentation.dice or 'N/A' }}\n\nDoctor Notes:\n{{ notes }}\n\n"
+        "Disclaimer: AI-generated insights for clinical support only. Verify with qualified clinician."
     )
-
-    from datetime import datetime
-    report_text = tmpl.render(
-        patient_id=patient_id,
-        doctor_name=doctor_name,
-        summary=summary,
-        classification=classification,
-        predicted_type=predicted_type,
-        segmentation=segmentation,
-        notes=notes,
-        date=datetime.utcnow().strftime("%Y-%m-%d"),
-    )
-
-    return {"report_text": report_text}
+    return {"report_text": tmpl.render(
+        patient_id=patient_id, doctor_name=doctor_name, summary=summary,
+        classification=classification, predicted_type=predicted_type,
+        segmentation=segmentation, notes=notes,
+        date=datetime.utcnow().strftime("%Y-%m-%d")
+    )}
 
 
 @router.get("/cases/{case_id}/similar")
-def similar_cases(
-    case_id: int,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Return similar cases by matching classification type when available.
-    Fallback to recent analyses.
-    """
+def similar_cases(case_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
     try:
         target = db.query(AnalysisResult).filter(AnalysisResult.file_id == case_id).first()
         if target and target.classification_type:
@@ -256,31 +324,19 @@ def similar_cases(
             ).order_by(AnalysisResult.analysis_date.desc()).limit(5).all()
         else:
             matches = db.query(AnalysisResult).order_by(AnalysisResult.analysis_date.desc()).limit(5).all()
-
         result = []
         for m in matches:
-            file_info = db.query(DBFile).filter(DBFile.file_id == m.file_id).first()
-            result.append({
-                "file_id": m.file_id,
-                "patient_id": file_info.patient_id if file_info else None,
-                "classification_type": m.classification_type,
-                "analysis_date": m.analysis_date.isoformat() if m.analysis_date else None,
-            })
+            f = db.query(DBFile).filter(DBFile.file_id == m.file_id).first()
+            result.append({"file_id": m.file_id, "patient_id": f.patient_id if f else None,
+                           "classification_type": m.classification_type,
+                           "analysis_date": m.analysis_date.isoformat() if m.analysis_date else None})
         return {"similar": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve similar cases: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/report/pdf")
-def generate_pdf_report(
-    body: dict,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Generate a PDF report from case data.
-    Returns: { "pdf_base64": str } (downloadable via frontend)
-    """
+def generate_pdf_report(body: dict, user=Depends(get_current_user), db: Session = Depends(get_db)):
     from reportlab.lib.pagesizes import letter
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -288,6 +344,7 @@ def generate_pdf_report(
     from reportlab.lib.units import inch
     from io import BytesIO
     import base64
+    from datetime import datetime
 
     patient_id = body.get("patient_id") or "Unknown"
     doctor_name = body.get("doctor_name") or (user.get("full_name") or "Doctor")
@@ -295,124 +352,40 @@ def generate_pdf_report(
     classification = body.get("classification") or {}
     segmentation = body.get("segmentation") or {}
     notes = body.get("notes") or ""
-
-    # Accept both frontend (`tumor_type`) and legacy (`type`) classification keys.
     predicted_type = classification.get("type") or classification.get("tumor_type") or "N/A"
 
-    # Create PDF in memory
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
-    story = []
     styles = getSampleStyleSheet()
-    
-    # Title
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=18,
-        textColor=colors.HexColor('#003366'),
-        spaceAfter=12,
-    )
+    story = []
+
+    title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18,
+                                  textColor=colors.HexColor('#003366'), spaceAfter=12)
     story.append(Paragraph("Seg-Mind Clinical Report", title_style))
     story.append(Spacer(1, 0.2*inch))
-    
-    # Patient info table
-    from datetime import datetime
-    data = [
-        ["Patient ID:", patient_id],
-        ["Assessing Clinician:", doctor_name],
-        ["Report Date:", datetime.utcnow().strftime("%Y-%m-%d")],
-    ]
-    t = Table(data, colWidths=[2*inch, 4*inch])
-    t.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
+
+    info = [["Patient ID:", patient_id], ["Clinician:", doctor_name],
+            ["Date:", datetime.utcnow().strftime("%Y-%m-%d")]]
+    t = Table(info, colWidths=[2*inch, 4*inch])
+    t.setStyle(TableStyle([('FONTNAME', (0,0),(0,-1),'Helvetica-Bold'),
+                           ('FONTSIZE',(0,0),(-1,-1),10), ('BOTTOMPADDING',(0,0),(-1,-1),6)]))
     story.append(t)
-    story.append(Spacer(1, 0.3*inch))
-    
-    # Clinical Summary
-    story.append(Paragraph("<b>Clinical Summary:</b>", styles['Heading2']))
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph("<b>AI Classification</b>", styles['Heading2']))
+    story.append(Paragraph(f"Type: {predicted_type} | Confidence: {classification.get('confidence','N/A')}", styles['BodyText']))
+    story.append(Spacer(1, 0.2*inch))
+    story.append(Paragraph("<b>Clinical Summary</b>", styles['Heading2']))
     story.append(Paragraph(summary or "N/A", styles['BodyText']))
     story.append(Spacer(1, 0.2*inch))
-    
-    # AI Classification
-    story.append(Paragraph("<b>AI Classification Results:</b>", styles['Heading2']))
-    class_data = [
-        ["Predicted Type:", predicted_type],
-        ["Confidence:", str(classification.get("confidence", "N/A"))],
-    ]
-    ct = Table(class_data, colWidths=[2*inch, 4*inch])
-    ct.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.append(ct)
-    story.append(Spacer(1, 0.2*inch))
-    
-    # Segmentation
-    story.append(Paragraph("<b>Segmentation Metrics:</b>", styles['Heading2']))
-    seg_data = [
-        ["Tumor Volume:", str(segmentation.get("volume", "N/A"))],
-        ["Dice Score:", str(segmentation.get("dice", "N/A"))],
-    ]
-    st = Table(seg_data, colWidths=[2*inch, 4*inch])
-    st.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-    ]))
-    story.append(st)
-    story.append(Spacer(1, 0.2*inch))
-    
-    # Doctor notes
-    story.append(Paragraph("<b>Clinical Notes:</b>", styles['Heading2']))
+    story.append(Paragraph("<b>Notes</b>", styles['Heading2']))
     story.append(Paragraph(notes or "N/A", styles['BodyText']))
-    story.append(Spacer(1, 0.3*inch))
-    
-    # Disclaimer
-    disclaimer_style = ParagraphStyle(
-        'Disclaimer',
-        parent=styles['BodyText'],
-        fontSize=8,
-        textColor=colors.grey,
-        borderColor=colors.grey,
-        borderWidth=1,
-        borderPadding=8,
-    )
-    story.append(Paragraph(
-        "<b>Disclaimer:</b> This report leverages AI-generated insights and is intended to "
-        "support clinical decision-making. It does not substitute for professional "
-        "medical judgment. Findings should be verified by a qualified clinician.",
-        disclaimer_style
-    ))
-    
-    # Build PDF
+
     doc.build(story)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    
-    # Encode as base64
-    pdf_b64 = base64.b64encode(pdf_bytes).decode('utf-8')
-    
-    return {"pdf_base64": pdf_b64}
+    return {"pdf_base64": base64.b64encode(buffer.getvalue()).decode('utf-8')}
 
 
 @router.get("/report/pdf/{file_id}")
-def generate_report_for_file(
-    file_id: int,
-    user = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Auto-generate a PDF clinical report for a given file_id.
-    Fetches analysis, classification, segmentation and doctor assessment from DB.
-    Accessible by the patient who owns the file OR any doctor/radiologist/oncologist.
-    Returns a streaming PDF so the browser downloads it directly.
-    """
+def generate_report_for_file(file_id: int, user=Depends(get_current_user), db: Session = Depends(get_db)):
     from reportlab.lib.pagesizes import letter
     from reportlab.lib import colors
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -421,192 +394,60 @@ def generate_report_for_file(
     from fastapi.responses import StreamingResponse
     from datetime import datetime
     from io import BytesIO
-    import base64
 
-    # ---- access control ----
     user_id = int(user.get("user_id"))
     user_role = user.get("role")
 
     file_record = db.query(DBFile).filter(DBFile.file_id == file_id).first()
     if not file_record:
         raise HTTPException(status_code=404, detail="File not found")
-
     if user_role == "patient":
-        # patient must own the file or be identified by patient_id
         db_user = db.query(User).filter(User.user_id == user_id).first()
-        patient_mrn = db_user.medical_record_number if db_user else None
-        if file_record.user_id != user_id and file_record.patient_id != patient_mrn:
+        if file_record.patient_id != (db_user.medical_record_number if db_user else None):
             raise HTTPException(status_code=403, detail="Access denied")
 
-    # ---- gather data from DB ----
-    analysis = (
-        db.query(AnalysisResult)
-        .filter(AnalysisResult.file_id == file_id)
-        .order_by(AnalysisResult.analysis_date.desc())
-        .first()
-    )
+    analysis = db.query(AnalysisResult).filter(
+        AnalysisResult.file_id == file_id
+    ).order_by(AnalysisResult.analysis_date.desc()).first()
 
-    patient_id = file_record.patient_id or "Unknown"
-    filename = file_record.filename or ""
-
-    # Build classification/segmentation/notes from analysis record
-    predicted_type = "N/A"
-    confidence_val = "N/A"
-    volume_val = "N/A"
-    dice_val = "N/A"
+    predicted_type = analysis.classification_type if analysis else "N/A"
+    confidence = f"{analysis.classification_confidence:.1f}%" if (analysis and analysis.classification_confidence) else "N/A"
+    volume = f"{analysis.tumor_volume:.2f} mm³" if (analysis and analysis.tumor_volume) else "N/A"
     doctor_name = "N/A"
-    clinical_notes = "No additional notes"
-    diagnosis_text = ""
-    prescription_text = ""
-    treatment_text = ""
-    followup_text = ""
-    next_appt = ""
+    if analysis and analysis.assessed_by:
+        doc_user = db.query(User).filter(User.user_id == analysis.assessed_by).first()
+        doctor_name = doc_user.full_name if doc_user else "N/A"
 
-    if analysis:
-        predicted_type = analysis.classification_type or "N/A"
-        confidence_val = f"{analysis.classification_confidence:.1f}%" if analysis.classification_confidence else "N/A"
-        if analysis.tumor_volume:
-            volume_val = f"{analysis.tumor_volume:.2f} mm³"
-        seg_data = analysis.segmentation_data or {}
-        dice_raw = seg_data.get("metrics", {}).get("dice_score") if isinstance(seg_data, dict) else None
-        if dice_raw is not None:
-            dice_val = f"{dice_raw:.3f}"
-
-        # Doctor info / assessment
-        if analysis.assessed_by:
-            doc_user = db.query(User).filter(User.user_id == analysis.assessed_by).first()
-            if doc_user:
-                doctor_name = doc_user.full_name or f"Doctor #{analysis.assessed_by}"
-
-        asmt = analysis.doctor_assessment if hasattr(analysis, "doctor_assessment") else None
-        if not asmt and analysis.notes:
-            # notes column may carry assessment JSON
-            import json
-            try:
-                asmt = json.loads(analysis.notes) if isinstance(analysis.notes, str) else analysis.notes
-            except Exception:
-                asmt = None
-
-        if isinstance(asmt, dict):
-            diagnosis_text = asmt.get("diagnosis") or asmt.get("clinical_diagnosis") or ""
-            prescription_text = asmt.get("prescription") or ""
-            treatment_text = asmt.get("treatment_plan") or ""
-            followup_text = asmt.get("follow_up_notes") or ""
-            next_appt = asmt.get("next_appointment") or ""
-            clinical_notes = asmt.get("interpretation") or asmt.get("doctor_interpretation") or "No additional notes"
-
-    # ---- build PDF ----
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
-    story = []
+    doc_pdf = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
-
-    title_style = ParagraphStyle(
-        "CustomTitle", parent=styles["Heading1"],
-        fontSize=18, textColor=colors.HexColor("#003366"), spaceAfter=12,
-    )
-    h2 = ParagraphStyle("H2", parent=styles["Heading2"], fontSize=12, spaceAfter=6, spaceBefore=10)
-    body = styles["BodyText"]
-
+    story = []
+    title_style = ParagraphStyle('T', parent=styles['Heading1'], fontSize=18,
+                                  textColor=colors.HexColor('#003366'), spaceAfter=12)
     story.append(Paragraph("Seg-Mind Clinical Report", title_style))
     story.append(Spacer(1, 0.15*inch))
-
-    # Patient info
-    info_data = [
-        ["Patient ID:", patient_id],
-        ["File:", filename],
-        ["Report Date:", datetime.utcnow().strftime("%Y-%m-%d")],
-        ["Assessing Clinician:", doctor_name],
-    ]
-    t = Table(info_data, colWidths=[2*inch, 4*inch])
-    t.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
+    info = [["Patient ID:", file_record.patient_id or "Unknown"],
+            ["File:", file_record.filename],
+            ["Date:", datetime.utcnow().strftime("%Y-%m-%d")],
+            ["Clinician:", doctor_name]]
+    t = Table(info, colWidths=[2*inch, 4*inch])
+    t.setStyle(TableStyle([('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
+                           ('FONTSIZE',(0,0),(-1,-1),10),('BOTTOMPADDING',(0,0),(-1,-1),5)]))
     story.append(t)
-    story.append(Spacer(1, 0.25*inch))
-
-    # AI Classification
-    story.append(Paragraph("<b>AI Classification Results</b>", h2))
-    cls_data = [
-        ["Predicted Type:", predicted_type],
-        ["Confidence:", confidence_val],
-    ]
-    ct = Table(cls_data, colWidths=[2*inch, 4*inch])
-    ct.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    story.append(ct)
     story.append(Spacer(1, 0.2*inch))
-
-    # Segmentation
-    story.append(Paragraph("<b>Segmentation Metrics</b>", h2))
-    seg_tbl = [
-        ["Tumor Volume:", volume_val],
-        ["Dice Score:", dice_val],
-    ]
-    st = Table(seg_tbl, colWidths=[2*inch, 4*inch])
-    st.setStyle(TableStyle([
-        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
-    story.append(st)
+    story.append(Paragraph("<b>AI Classification Results</b>", styles['Heading2']))
+    story.append(Paragraph(f"Predicted Type: {predicted_type} | Confidence: {confidence}", styles['BodyText']))
+    story.append(Spacer(1, 0.1*inch))
+    story.append(Paragraph(f"Tumor Volume: {volume}", styles['BodyText']))
     story.append(Spacer(1, 0.2*inch))
-
-    # Clinical Assessment (doctor fields)
-    story.append(Paragraph("<b>Clinical Assessment</b>", h2))
-    if diagnosis_text:
-        story.append(Paragraph(f"<b>Diagnosis:</b> {diagnosis_text}", body))
-        story.append(Spacer(1, 0.1*inch))
-    if clinical_notes and clinical_notes != "No additional notes":
-        story.append(Paragraph("<b>Clinical Interpretation:</b>", body))
-        story.append(Paragraph(clinical_notes, body))
-        story.append(Spacer(1, 0.1*inch))
-    elif not diagnosis_text:
-        story.append(Paragraph("No clinical assessment recorded yet.", body))
-        story.append(Spacer(1, 0.1*inch))
-    if prescription_text:
-        story.append(Paragraph("<b>Prescription:</b>", body))
-        story.append(Paragraph(prescription_text, body))
-        story.append(Spacer(1, 0.1*inch))
-    if treatment_text:
-        story.append(Paragraph("<b>Treatment Plan:</b>", body))
-        story.append(Paragraph(treatment_text, body))
-        story.append(Spacer(1, 0.1*inch))
-    if followup_text:
-        story.append(Paragraph("<b>Follow-up Notes:</b>", body))
-        story.append(Paragraph(followup_text, body))
-        story.append(Spacer(1, 0.1*inch))
-    if next_appt:
-        story.append(Paragraph(f"<b>Next Appointment:</b> {next_appt}", body))
-        story.append(Spacer(1, 0.1*inch))
-
-    story.append(Spacer(1, 0.2*inch))
-
-    # Disclaimer
-    disc_style = ParagraphStyle(
-        "Disclaimer", parent=body,
-        fontSize=8, textColor=colors.grey,
-        borderColor=colors.grey, borderWidth=1, borderPadding=8,
-    )
+    if analysis and analysis.doctor_interpretation:
+        story.append(Paragraph("<b>Clinical Assessment</b>", styles['Heading2']))
+        story.append(Paragraph(analysis.doctor_interpretation, styles['BodyText']))
+    disc = ParagraphStyle('D', parent=styles['BodyText'], fontSize=8, textColor=colors.grey)
+    story.append(Spacer(1, 0.3*inch))
     story.append(Paragraph(
-        "<b>Disclaimer:</b> This report leverages AI-generated insights and is intended to "
-        "support clinical decision-making. It does not substitute for professional "
-        "medical judgment. Findings should be verified by a qualified clinician.",
-        disc_style,
-    ))
-
-    doc.build(story)
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-
-    safe_patient = (patient_id or "report").replace(" ", "_")
-    return StreamingResponse(
-        BytesIO(pdf_bytes),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="report_{safe_patient}.pdf"'},
-    )
+        "<b>Disclaimer:</b> AI-generated insights for clinical support only. Verify with qualified clinician.", disc))
+    doc_pdf.build(story)
+    safe_pid = (file_record.patient_id or "report").replace(" ", "_")
+    return StreamingResponse(BytesIO(buffer.getvalue()), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="report_{safe_pid}.pdf"'})

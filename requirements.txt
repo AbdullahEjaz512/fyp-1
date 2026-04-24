@@ -49,6 +49,7 @@ grad-cam>=1.4.0
 # RAG and Embeddings
 sentence-transformers>=2.2.0
 faiss-cpu>=1.7.4
+groq>=0.4.0
 
 # 3D Reconstruction and Mesh Processing
 numpy-stl>=3.0.0
