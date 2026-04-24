@@ -29,47 +29,51 @@ export default function VisualizationPage() {
 
   useEffect(() => {
     let isActive = true;
+    
+    // Safety: ensure we have a valid numeric fileId
+    const numericFileId = fileId ? parseInt(fileId) : null;
 
     const loadData = async () => {
-      if (!fileId) return;
+      if (!numericFileId) return;
 
       setLoading(true);
       setErrorMsg(null);
-      setImageData(null);
-
-      if (view !== 'slice') setMetrics(null);
+      // We don't clear imageData immediately to avoid flickering 
+      // if the request is fast or cached.
 
       try {
         let response;
         if (view === 'slice') {
           response = await advancedService.visualizeSlice({
-            file_id: parseInt(fileId),
+            file_id: numericFileId,
             slice_idx: sliceIdx,
             axis,
             include_segmentation: includeSegmentation
           });
         } else if (view === 'multiview') {
           response = await advancedService.visualizeMultiView({
-            file_id: parseInt(fileId),
+            file_id: numericFileId,
             include_segmentation: includeSegmentation
           });
         } else if (view === 'montage') {
           response = await advancedService.visualizeMontage({
-            file_id: parseInt(fileId),
+            file_id: numericFileId,
             num_slices: 12,
             axis
           });
         } else if (view === '3d') {
           response = await advancedService.visualize3DProjection({
-            file_id: parseInt(fileId),
+            file_id: numericFileId,
             method: 'mip'
           });
         }
 
-        if (isActive && response?.data?.image_base64) {
-          setImageData(response.data.image_base64);
-        } else if (isActive) {
-          setErrorMsg("No image data returned from server.");
+        if (isActive) {
+          if (response?.data?.image_base64) {
+            setImageData(response.data.image_base64);
+          } else {
+            setErrorMsg("No image data returned from server.");
+          }
         }
       } catch (err: any) {
         if (isActive) {
@@ -84,9 +88,9 @@ export default function VisualizationPage() {
     };
 
     const loadMetrics = async () => {
-      if (!fileId) return;
+      if (!numericFileId) return;
       try {
-        const response = await advancedService.getVolumeMetrics(parseInt(fileId));
+        const response = await advancedService.getVolumeMetrics(numericFileId);
         if (isActive) setMetrics(response.data.metrics);
       } catch (err) {
         if (isActive) console.error('Metrics error:', err);
@@ -94,13 +98,21 @@ export default function VisualizationPage() {
     };
 
     loadData();
-    // Only load metrics if we are including segmentation overlay (often provides volume metrics)
     if (includeSegmentation) {
       loadMetrics();
     }
 
+    // Initial load safety: if image is still null after 1.5s, retry once
+    const timer = setTimeout(() => {
+      if (isActive && !imageData && !loading && numericFileId) {
+        console.log('🔄 Retrying initial load...');
+        loadData();
+      }
+    }, 1500);
+
     return () => {
       isActive = false;
+      clearTimeout(timer);
     };
   }, [fileId, view, sliceIdx, axis, includeSegmentation]);
 
@@ -252,10 +264,22 @@ export default function VisualizationPage() {
         )}
         {imageData && !loading && (
           <img
+            key={`${view}-${fileId}-${includeSegmentation}-${sliceIdx}-${axis}`}
             src={`data:image/png;base64,${imageData}`}
             alt="MRI Visualization"
-            className="viz-image"
+            className="viz-image premium-shadow"
+            style={{ 
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 0 40px rgba(0, 0, 0, 0.8)'
+            }}
           />
+        )}
+        {!imageData && !loading && (
+          <div className="no-data-hint">
+            <p>Click "Refresh" if visualization doesn't load automatically.</p>
+            <button onClick={() => window.location.reload()} className="btn-retry">Force Reload</button>
+          </div>
         )}
       </div>
 

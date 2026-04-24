@@ -147,7 +147,7 @@ def get_growth_history(
                 "file_id": analysis.file_id,
                 "volume": analysis.tumor_volume or 0.0,
                 "timestamp": analysis.analysis_date.isoformat() if analysis.analysis_date else None,
-                # Add more features if available in your AnalysisResult model
+                "confidence": round((getattr(analysis, 'classification_confidence', 0.0) or 0.0) * 100, 1),
                 "mean_intensity": 0.0,  # Placeholder
                 "std_intensity": 0.0,
                 "max_diameter": 0.0,
@@ -219,59 +219,61 @@ def explain_classification(
         try:
             service = get_xai_service()
             
+            # Get the processed file path from DB record
+            if not db_file.preprocessed or not db_file.preprocessed_path:
+                logger.warning(f"File {file_id} not preprocessed, cannot generate real XAI")
+                raise Exception("File not preprocessed")
+                
+            volume_path = Path(db_file.preprocessed_path)
+            if not volume_path.exists():
+                logger.warning(f"Preprocessed file not found at {volume_path}")
+                raise Exception("Preprocessed file missing")
+            
             # Load actual MRI data
             import nibabel as nib
-            from pathlib import Path
+            img = nib.load(str(volume_path))
+            data = img.get_fdata()
             
-            # Get the processed file path
-            data_dir = Path("data/processed") / str(file_id)
-            nii_files = list(data_dir.glob("*.nii.gz"))
+            # Get middle slice
+            mid_slice = data.shape[2] // 2
+            slice_data = data[:, :, mid_slice]
+                
+            # Normalize
+            slice_data = (slice_data - slice_data.min()) / (slice_data.max() - slice_data.min() + 1e-8)
+            slice_data = np.expand_dims(slice_data, axis=-1)
             
-            if nii_files:
-                # Load middle slice from the scan
-                img = nib.load(str(nii_files[0]))
-                data = img.get_fdata()
+            result = service.explain_classification(slice_data, target_cls, method)
+            
+            if 'error' not in result:
+                # Convert arrays to base64 PNG for JSON
+                import base64
+                from io import BytesIO
+                from PIL import Image
                 
-                # Get middle slice
-                mid_slice = data.shape[2] // 2
-                slice_data = data[:, :, mid_slice]
+                heatmap_base64 = None
+                if 'overlay' in result:
+                    overlay_img = (result['overlay'] * 255).astype(np.uint8)
+                    pil_img = Image.fromarray(overlay_img)
+                    buffer = BytesIO()
+                    pil_img.save(buffer, format='PNG')
+                    heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
+                elif 'heatmap' in result:
+                    # Fallback: convert raw heatmap to a colored image
+                    heat = (result['heatmap'] * 255).astype(np.uint8)
+                    pil_img = Image.fromarray(heat)
+                    pil_img = pil_img.convert('L').resize((256, 256))
+                    buffer = BytesIO()
+                    pil_img.save(buffer, format='PNG')
+                    heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
                 
-                # Normalize
-                slice_data = (slice_data - slice_data.min()) / (slice_data.max() - slice_data.min() + 1e-8)
-                slice_data = np.expand_dims(slice_data, axis=-1)
-                
-                result = service.explain_classification(slice_data, target_cls, method)
-                
-                if 'error' not in result:
-                    # Convert arrays to base64 PNG for JSON
-                    import base64
-                    from io import BytesIO
-                    from PIL import Image
-                    
-                    heatmap_base64 = None
-                    if 'overlay' in result:
-                        overlay_img = (result['overlay'] * 255).astype(np.uint8)
-                        pil_img = Image.fromarray(overlay_img)
-                        buffer = BytesIO()
-                        pil_img.save(buffer, format='PNG')
-                        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
-                    elif 'heatmap' in result:
-                        # Fallback: convert raw heatmap to a colored image
-                        heat = (result['heatmap'] * 255).astype(np.uint8)
-                        pil_img = Image.fromarray(heat)
-                        pil_img = pil_img.convert('L').resize((256, 256))
-                        buffer = BytesIO()
-                        pil_img.save(buffer, format='PNG')
-                        heatmap_base64 = base64.b64encode(buffer.getvalue()).decode()
-                    
-                    if heatmap_base64:
-                        return {
-                            "file_id": file_id,
-                            "method": method,
-                            "target_class": target_cls,
-                            "heatmap_base64": heatmap_base64,
-                            "confidence": conf_val
-                        }
+                if heatmap_base64:
+                    return {
+                        "file_id": file_id,
+                        "method": method,
+                        "target_class": target_cls,
+                        "heatmap_base64": heatmap_base64,
+                        "confidence": conf_val
+                    }
         except Exception as xai_error:
             logger.warning(f"Real XAI failed, using mock: {xai_error}")
 

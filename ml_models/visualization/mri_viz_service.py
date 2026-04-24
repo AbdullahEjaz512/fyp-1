@@ -209,11 +209,13 @@ class MRIVisualizationService:
         if not MATPLOTLIB_AVAILABLE:
             raise RuntimeError("Matplotlib not available for visualization")
         
-        # Determine slice positions
+        # Determine slice positions - use last 3 dimensions for spatial context
+        spatial_shape = volume.shape[-3:]
         if center_coords is None:
-            center_coords = tuple(s // 2 for s in volume.shape)
+            center_coords = tuple(s // 2 for s in spatial_shape)
         
-        x, y, z = center_coords
+        # Ensure we only take 3 coords for unpacking
+        x, y, z = center_coords[:3]
         
         # Always show all three views for consistency
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -392,10 +394,10 @@ class MRIVisualizationService:
         ]
         
         for (title, proj), ax in zip(projections, axes):
-                proj_norm = self.normalize_intensity(proj)
-                ax.imshow(proj_norm, cmap='hot', aspect='auto')
-                ax.set_title(title, fontsize=12, fontweight='bold')
-                ax.axis('off')
+            proj_norm = self.normalize_intensity(proj)
+            ax.imshow(proj_norm, cmap='hot', aspect='auto')
+            ax.set_title(title, fontsize=12, fontweight='bold')
+            ax.axis('off')
         
         plt.tight_layout()
         
