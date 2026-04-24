@@ -1242,6 +1242,27 @@ async def upload_file(
         )
         
         db.add(db_file)
+        db.flush()  # Get the file_id before committing
+        
+        # FR1.1 - Automatically grant access to the doctor who uploaded the file
+        if user_role != 'patient':
+            # Check if permission already exists
+            existing_perm = db.query(FileAccessPermission).filter(
+                FileAccessPermission.file_id == db_file.file_id,
+                FileAccessPermission.doctor_id == user_id
+            ).first()
+            
+            if not existing_perm:
+                new_perm = FileAccessPermission(
+                    file_id=db_file.file_id,
+                    patient_id=patient_id,
+                    doctor_id=user_id,
+                    access_level='view_and_analyze',
+                    status='active'
+                )
+                db.add(new_perm)
+                logger.info(f"Auto-granted access to uploader doctor {user_id} for file {db_file.file_id}")
+        
         db.commit()
         db.refresh(db_file)
         
@@ -1485,8 +1506,7 @@ async def list_mri_files(
         files_query = db.query(DBFile).filter(DBFile.patient_id == patient_id)
         files = files_query.order_by(DBFile.upload_date.desc()).all()
     else:
-        # Doctors see only files they have been granted access to
-        # Get file IDs from access permissions
+        # Doctors see files they uploaded OR files they have been granted access to
         permitted_file_ids = db.query(FileAccessPermission.file_id).filter(
             FileAccessPermission.doctor_id == user_id,
             FileAccessPermission.status == 'active'
@@ -1494,10 +1514,10 @@ async def list_mri_files(
         
         file_ids = [f[0] for f in permitted_file_ids]
         
-        if file_ids:
-            files = db.query(DBFile).filter(DBFile.file_id.in_(file_ids)).order_by(DBFile.upload_date.desc()).all()
-        else:
-            files = []
+        # Combine files uploaded by doctor and files with granted access
+        files = db.query(DBFile).filter(
+            (DBFile.user_id == user_id) | (DBFile.file_id.in_(file_ids))
+        ).order_by(DBFile.upload_date.desc()).all()
     
     # Convert to list of dicts and include analysis info
     user_files = []
@@ -1551,10 +1571,35 @@ async def get_mri_file(
     
     # Check access permissions
     user_id = int(user.get("user_id"))
-    if file_record.user_id != user_id:
+    user_role = user.get("role")
+    
+    has_access = False
+    
+    # 1. Original uploader always has access
+    if file_record.user_id == user_id:
+        has_access = True
+    
+    # 2. Patients have access to files where patient_id matches their record number
+    if not has_access and user_role == 'patient':
+        db_user = db.query(User).filter(User.user_id == user_id).first()
+        if db_user and db_user.medical_record_number and \
+           file_record.patient_id == db_user.medical_record_number:
+            has_access = True
+            
+    # 3. Doctors have access if they have a permission record
+    if not has_access and user_role in ['doctor', 'radiologist', 'oncologist']:
+        permission = db.query(FileAccessPermission).filter(
+            FileAccessPermission.file_id == file_id,
+            FileAccessPermission.doctor_id == user_id,
+            FileAccessPermission.status == 'active'
+        ).first()
+        if permission:
+            has_access = True
+            
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
+            detail="Access denied: You do not have permission to view this file"
         )
     
     return {
