@@ -30,20 +30,41 @@ export default function HomePage() {
                 : 'Access your doctor dashboard and patient cases'}
             </p>
             <div className="hero-stats">
-              <div className="stat-card">
-                <CheckCircle className="stat-icon" />
-                <div className="stat-value">96.6%</div>
-                <div className="stat-label">Accuracy</div>
+              <div className="stat-card accuracy">
+                <div className="stat-card-header">
+                  <div className="stat-icon-wrapper">
+                    <span className="material-symbols-outlined stat-icon" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                  </div>
+                  <h3 className="stat-title">Accuracy</h3>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value">96.6<span className="stat-unit">%</span></div>
+                  <div className="stat-progress-container">
+                    <div className="stat-progress-bar" style={{ width: '96.6%' }}></div>
+                  </div>
+                </div>
               </div>
               <div className="stat-card">
-                <Clock className="stat-icon" />
-                <div className="stat-value">&lt;10s</div>
-                <div className="stat-label">Processing</div>
+                <div className="stat-card-header">
+                  <div className="stat-icon-wrapper">
+                    <span className="material-symbols-outlined stat-icon">timer</span>
+                  </div>
+                  <h3 className="stat-title">Processing</h3>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value">&lt;10<span className="stat-unit">s</span></div>
+                </div>
               </div>
               <div className="stat-card">
-                <Shield className="stat-icon" />
-                <div className="stat-value">HIPAA</div>
-                <div className="stat-label">Compliant</div>
+                <div className="stat-card-header">
+                  <div className="stat-icon-wrapper">
+                    <span className="material-symbols-outlined stat-icon">shield_lock</span>
+                  </div>
+                  <h3 className="stat-title">Security</h3>
+                </div>
+                <div className="stat-main">
+                  <div className="stat-value" style={{ fontSize: '1.5rem' }}>HIPAA</div>
+                </div>
               </div>
             </div>
           </div>
@@ -93,25 +114,70 @@ export default function HomePage() {
             </button>
           </div>
           <div className="hero-stats">
-            <div className="stat-card">
-              <CheckCircle className="stat-icon" />
-              <div className="stat-value">96.6%</div>
-              <div className="stat-label">Classification Accuracy</div>
+            {/* Card 1: Accuracy */}
+            <div className="stat-card accuracy">
+              <div className="stat-card-header">
+                <div className="stat-icon-wrapper">
+                  <span className="material-symbols-outlined stat-icon" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                </div>
+                <h3 className="stat-title">Classification Accuracy</h3>
+              </div>
+              <div className="stat-main">
+                <div className="stat-value">
+                  96.6<span className="stat-unit">%</span>
+                </div>
+                <div className="stat-progress-container">
+                  <div className="stat-progress-bar" style={{ width: '96.6%' }}></div>
+                </div>
+              </div>
             </div>
+
+            {/* Card 2: Processing Time */}
             <div className="stat-card">
-              <Clock className="stat-icon" />
-              <div className="stat-value">&lt;10s</div>
-              <div className="stat-label">Processing Time</div>
+              <div className="stat-card-header">
+                <div className="stat-icon-wrapper">
+                  <span className="material-symbols-outlined stat-icon">timer</span>
+                </div>
+                <h3 className="stat-title">Processing Time</h3>
+              </div>
+              <div className="stat-main">
+                <div className="stat-value">
+                  <span className="stat-unit" style={{ marginRight: '4px' }}>&lt;</span>10<span className="stat-unit" style={{ marginLeft: '4px' }}>sec</span>
+                </div>
+                <p className="stat-subtitle">Per high-resolution MRI scan</p>
+              </div>
             </div>
+
+            {/* Card 3: Tumor Types */}
             <div className="stat-card">
-              <Brain className="stat-icon" />
-              <div className="stat-value">4</div>
-              <div className="stat-label">Tumor Types</div>
+              <div className="stat-card-header">
+                <div className="stat-icon-wrapper">
+                  <span className="material-symbols-outlined stat-icon">psychology</span>
+                </div>
+                <h3 className="stat-title">Classified Types</h3>
+              </div>
+              <div className="stat-main">
+                <div className="stat-value">4</div>
+                <div className="stat-chips">
+                  <span className="stat-chip">GLIOMA</span>
+                  <span className="stat-chip">MENINGIOMA</span>
+                  <span className="stat-chip">PITUITARY</span>
+                  <span className="stat-chip">NO TUMOR</span>
+                </div>
+              </div>
             </div>
+
+            {/* Card 4: Compliance */}
             <div className="stat-card">
-              <Shield className="stat-icon" />
-              <div className="stat-value">HIPAA</div>
-              <div className="stat-label">Compliant</div>
+              <div className="stat-card-header">
+                <div className="stat-icon-wrapper">
+                  <span className="material-symbols-outlined stat-icon">shield_lock</span>
+                </div>
+                <h3 className="stat-title">Security Standard</h3>
+              </div>
+              <div className="stat-main">
+                <div className="stat-value" style={{ fontSize: '1.5rem' }}>HIPAA Compliant</div>
+              </div>
             </div>
           </div>
         </div>
